@@ -1,0 +1,116 @@
+### 一、Java编译相关 ###
+*.class
+*.jar
+*.war
+*.ear
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+### 二、Gradle构建相关 (如果你用Gradle) ###
+.gradle/
+build/
+*/build/
+!gradle/wrapper/gradle-wrapper.jar
+gradle-app.setting
+gradle-wrapper.jar
+gradle-wrapper.properties
+#忽略week01文件夹下的更改
+week01/
+
+### 三、IDE配置相关 ###
+## IntelliJ IDEA
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+.DS_Store
+
+## Eclipse
+.project
+.classpath
+.settings/
+.springBeans
+*.prefs
+*.log
+
+## NetBeans
+nb-configuration.xml
+nbactions.xml
+nb-dist.xml
+nbproject/private/
+nbbuild/
+dist/
+**/nbdist/
+
+## VS Code
+.vscode/
+.factorypath
+*.code-workspace
+
+### 四、日志文件 ###
+*.log
+logs/
+**/logs/
+spring-boot-logging.log
+hs_err_pid*
+*.pid
+*.stream
+
+### 五、操作系统生成文件 ###
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+Thumbs.db:encryptable
+
+### 六、应用运行时/配置文件 ###
+## 忽略配置文件（避免泄露密码/API密钥）
+application-*.yml
+application-*.properties
+!application.yml
+!application.properties
+!.env
+.env
+.env.local
+.env.*.local
+secrets/
+**/secrets/
+
+## 数据库相关
+*.h2.db
+*.mv.db
+*.db
+*.script
+*.log
+*.properties.bak
+*.bin
+*.lck
+*.trace.db
+
+## 热部署/生成的文件
+.spring-boot-devtools.properties
+*.springBeans
+.factorypath
+spring-boot-location.db
+heapdump*.hprof
+*.tmp
+*.temp
+*~
+
+### 七、Docker/Kubernetes (可选) ###
+*.dockercontext
+*.dockerignore
+helm/charts/*.tgz
