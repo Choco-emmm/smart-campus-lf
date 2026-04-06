@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.choco.smartlf.mapper.ItemDetailMapper">
+
+    <resultMap id="BaseResultMap" type="com.choco.smartlf.entity.pojo.ItemDetail">
+            <id property="itemId" column="item_id" />
+            <result property="semiPublicDesc" column="semi_public_desc" />
+            <result property="imagesUrl" column="images_url" />
+            <result property="aiGeneratedDesc" column="ai_generated_desc" />
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        item_id,semi_public_desc,images_url,ai_generated_desc
+    </sql>
+</mapper>

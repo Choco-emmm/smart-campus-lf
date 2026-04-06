@@ -1,3 +1,27 @@
 spring:
   application:
     name: smartlf
+  data:
+    # redis配置
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+      password: ${REDIS_PASSWORD}
+      lettuce:
+        pool:
+          max-active: 10
+          max-idle: 10
+          min-idle: 1
+          time-between-eviction-runs: 10s
+  #数据库的连接信息
+  datasource:
+    #    url: jdbc:mysql://localhost:3306/dems
+    url: jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+#Mybatis相关配置
+mybatis:
+  map-underscore-to-camel-case: true
+system:
+  admin-secret-key: ${ADMIN_SECRET_KEY:QG-Studio-2026}

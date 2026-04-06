@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.choco.smartlf.mapper.UserMapper">
+
+    <resultMap id="BaseResultMap" type="com.choco.smartlf.entity.pojo.User">
+            <id property="id" column="id" />
+            <result property="username" column="username" />
+            <result property="nickname" column="nickname" />
+            <result property="email" column="email" />
+            <result property="phone" column="phone" />
+            <result property="password" column="password" />
+            <result property="avatarUrl" column="avatar_url" />
+            <result property="role" column="role" />
+            <result property="status" column="status" />
+            <result property="lastActiveTime" column="last_active_time" />
+            <result property="createTime" column="create_time" />
+            <result property="updateTime" column="update_time" />
+            <result property="isDeleted" column="is_deleted" />
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,username,nickname,email,phone,password,
+        avatar_url,role,status,last_active_time,create_time,
+        update_time,is_deleted
+    </sql>
+</mapper>

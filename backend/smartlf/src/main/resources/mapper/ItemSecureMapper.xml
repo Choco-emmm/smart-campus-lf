@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.choco.smartlf.mapper.ItemSecureMapper">
+
+    <resultMap id="BaseResultMap" type="com.choco.smartlf.entity.pojo.ItemSecure">
+            <id property="itemId" column="item_id" />
+            <result property="verifyAnswer" column="verify_answer" />
+            <result property="privateContact" column="private_contact" />
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        item_id,verify_answer,private_contact
+    </sql>
+</mapper>
