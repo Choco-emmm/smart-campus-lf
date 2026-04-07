@@ -3,6 +3,7 @@ package com.choco.smartlf.service;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.choco.smartlf.entity.dto.ItemPublishDTO;
 import com.choco.smartlf.entity.pojo.ItemInfo;
+import com.choco.smartlf.entity.vo.ItemDetailVO;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
@@ -15,4 +16,6 @@ public interface ItemInfoService extends IService<ItemInfo> {
     void publishItem(ItemPublishDTO dto);
 
     String uploadImage(MultipartFile file);
+
+    ItemDetailVO getItemDetail(Long id);
 }

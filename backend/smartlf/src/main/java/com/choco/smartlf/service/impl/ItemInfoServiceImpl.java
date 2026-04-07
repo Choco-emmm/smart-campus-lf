@@ -3,6 +3,7 @@ package com.choco.smartlf.service.impl;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.collection.ListUtil;
+import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 
@@ -10,6 +11,7 @@ import com.choco.smartlf.entity.dto.ItemPublishDTO;
 import com.choco.smartlf.entity.pojo.ItemDetail;
 import com.choco.smartlf.entity.pojo.ItemInfo;
 import com.choco.smartlf.entity.pojo.ItemSecure;
+import com.choco.smartlf.entity.vo.ItemDetailVO;
 import com.choco.smartlf.enums.ResultCodeEnum;
 import com.choco.smartlf.exception.BusinessException;
 import com.choco.smartlf.mapper.ItemInfoMapper;
@@ -72,14 +74,19 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
         log.info("itemDetail: {}", itemDetail);
 
 
-        ItemSecure itemSecure = new ItemSecure();
-        itemSecure.setItemId(itemId); // 同样关联主表 ID
-        itemSecure.setVerifyAnswer(dto.getVerifyAnswer());
-        itemSecure.setPrivateContact(dto.getPrivateContact());
-        //插入安全核验表
-        itemSecureService.save(itemSecure);
-
-        log.info("物品发布成功，成功落盘三张表，物品ID: {}", itemId);
+        if (StrUtil.isNotBlank(dto.getVerifyAnswer()) || StrUtil.isNotBlank(dto.getPrivateContact())) {
+            // 兜底校验：如果填了暗号没填联系方式，或者填了联系方式没填暗号，都要拦截
+            if (StrUtil.isBlank(dto.getVerifyAnswer()) || StrUtil.isBlank(dto.getPrivateContact())) {
+                throw new BusinessException("开启私密核验时，暗号与联系方式必须同时填写！");
+            }
+            ItemSecure itemSecure = new ItemSecure();
+            itemSecure.setItemId(itemId);
+            itemSecure.setVerifyAnswer(dto.getVerifyAnswer());
+            itemSecure.setPrivateContact(dto.getPrivateContact());
+            //插入核验表
+            itemSecureService.save(itemSecure);
+        }
+        log.info("物品发布成功，物品ID: {}", itemId);
     }
 
     @Override
@@ -117,6 +124,11 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
         log.info("物品图片上传成功，访问路径: {}", accessUrl);
 
         return accessUrl;
+    }
+
+    @Override
+    public ItemDetailVO getItemDetail(Long id) {
+        return null;
     }
 }
 

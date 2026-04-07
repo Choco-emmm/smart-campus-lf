@@ -39,11 +39,10 @@ public class ItemPublishDTO {
     @Schema(description = "图片URL列表（前端上传后拿到的URL数组）")
     private List<String> imagesUrlList;
 
-    @NotBlank(message = "核验暗号不能为空")
-    @Schema(description = "核验暗号（如：笔身刻了什么字？）", required = true)
+    @Schema(description = "核验暗号（选填，贵重物品建议填写）")
     private String verifyAnswer;
 
-    @NotBlank(message = "联系方式不能为空")
-    @Schema(description = "发布者的真实联系方式（QQ/微信/手机号）", required = true)
+    
+    @Schema(description = "联系方式（选填，若填写暗号则此项必填）")
     private String privateContact;
 }

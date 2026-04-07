@@ -15,7 +15,11 @@ public class UserContext {
     }
     //获取用户id
     public static Long getUserId() {
-        return (Long) CURRENT_LOCAL.get().get("userId");
+        Object userIdObj = CURRENT_LOCAL.get().get("userId");
+        if (userIdObj == null) {
+            return null;
+        }
+        return Long.valueOf(userIdObj.toString());
     }
     //获取用户身份
     public static Integer getUserRole() {

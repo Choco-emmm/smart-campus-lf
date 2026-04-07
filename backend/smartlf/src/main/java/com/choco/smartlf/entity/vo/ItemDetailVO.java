@@ -6,7 +6,7 @@ import java.util.Date;
 import java.util.List;
 
 @Data
-@Schema(description = "物品详情视图对象 (全量，不含核验答案)")
+@Schema(description = "物品详情视图对象")
 public class ItemDetailVO {
     private Long id;
     private Long userId; // 发布人ID
@@ -26,6 +26,9 @@ public class ItemDetailVO {
     
     @Schema(description = "AI智能辅助描述")
     private String aiGeneratedDesc;
+
+    @Schema(description = "是否开启了私密核验模式 (true:需要暗号认领, false:普通公开拿取)")
+    private Boolean hasSecureCheck;
 
     private Date createTime;
 }

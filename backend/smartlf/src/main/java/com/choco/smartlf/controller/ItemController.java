@@ -34,12 +34,13 @@ public class ItemController {
 
 // TODO: 分页查询列表接口 (后续结合 MyBatis-Plus 分页插件实现)
 
-//    @Operation(summary = "获取物品详情")
-//    @GetMapping("/{id}")
-//    public Result<ItemDetailVO> getItemDetail(@PathVariable Long id) {
-//        ItemDetailVO vo = itemInfoService.getItemDetail(id);
-//        return Result.success(vo);
-//    }
+    @Operation(summary = "获取信息详情")
+    @GetMapping("/{id}")
+    public Result<ItemDetailVO> getItemDetail(@PathVariable Long id) {
+        ItemDetailVO vo = itemInfoService.getItemDetail(id);
+        return Result.success(vo);
+    }
+
 //@Operation(summary = "举报物品信息")
 //@PostMapping("/report")
 //public Result<Void> reportItem(@Validated @RequestBody ItemReportDTO dto) {
