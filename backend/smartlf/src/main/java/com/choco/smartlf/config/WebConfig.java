@@ -38,7 +38,12 @@ public class WebConfig implements WebMvcConfigurer {
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(tokenInterceptor)
                 .addPathPatterns("/**")
-                .excludePathPatterns("/user/login", "/user/register", "/user/is*","/images/**");
+                .excludePathPatterns("/user/login", "/user/register", "/user/is*","/images/**",
+                        // --- 下面是给 Swagger 和 Knife4j 放行的路径 ---
+                        "/doc.html",               // Knife4j 页面
+                        "/swagger-ui/**",          // Swagger UI 页面
+                        "/v3/api-docs/**",         // OpenAPI 3.0 的 JSON 数据接口
+                        "/webjars/**"  );            // 前端静态资源);
     }
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {

@@ -15,6 +15,7 @@ import com.choco.smartlf.service.UserService;
 import com.choco.smartlf.utils.UserContext;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
@@ -32,6 +33,7 @@ public class UserController {
     private final UserService userService;
 
     @Operation(summary = "通用唯一性校验 ，供输入失焦后校验")
+    @SecurityRequirements()
     @GetMapping("/isExist")
     public Result<Boolean> isExist(
             @Schema(description = "校验类型: USERNAME/PHONE/EMAIL", required = true) @RequestParam CheckType type,
@@ -47,6 +49,7 @@ public class UserController {
     }
 
     @Operation(summary = "所填旧密码是否与原密码相同校验，供输入失焦后校验")
+    @SecurityRequirements()
     @GetMapping("/isSame")
     public Result<Boolean> isSame(
             @Schema(description = "要校验的值", required = true) @RequestParam String value) {
@@ -62,6 +65,7 @@ public class UserController {
     }
 
     @Operation(summary = "用户注册", description = "管理员注册需提供密钥")
+    @SecurityRequirements()
     @PostMapping("/register")
     public Result<String> register(@Validated @RequestBody UserRegisterDTO dto) {
         userService.registerUser(dto);
@@ -69,6 +73,7 @@ public class UserController {
     }
 
     @Operation(summary = "用户登录")
+    @SecurityRequirements()
     @PostMapping("/login")
     public Result<UserLoginVO> login(@Validated @RequestBody UserLoginDTO dto) {
         UserLoginVO vo = userService.login(dto);

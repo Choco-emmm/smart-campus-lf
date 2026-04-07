@@ -1,0 +1,31 @@
+package com.choco.smartlf.entity.vo;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.Data;
+import java.util.Date;
+import java.util.List;
+
+@Data
+@Schema(description = "物品详情视图对象 (全量，不含核验答案)")
+public class ItemDetailVO {
+    private Long id;
+    private Long userId; // 发布人ID
+    private String publisherNickname; // 发布人昵称
+    private Integer type;
+    private String itemName;
+    private Date eventTime;
+    private String location;
+    private String publicDesc;
+    private Integer status;
+    
+    @Schema(description = "半公开细节")
+    private String semiPublicDesc;
+    
+    @Schema(description = "图片列表")
+    private List<String> imagesUrlList;
+    
+    @Schema(description = "AI智能辅助描述")
+    private String aiGeneratedDesc;
+
+    private Date createTime;
+}

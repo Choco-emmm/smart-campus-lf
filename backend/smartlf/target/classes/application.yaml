@@ -21,8 +21,11 @@ spring:
     password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
 #Mybatis相关配置
-mybatis:
+mybatis-plus:
   map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      id-type: auto # 全局设置主键生成策略为数据库自增
 system:
   admin-secret-key: ${ADMIN_SECRET_KEY:QG-Studio-2026}
   file-prefix: ${SYSTEM.FILE-PREFIX:D:/upload/}

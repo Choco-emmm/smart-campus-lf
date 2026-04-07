@@ -223,7 +223,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public String updateAvatar(Long userId, MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new BusinessException(ResultCodeEnum.INVALID_FILE);
