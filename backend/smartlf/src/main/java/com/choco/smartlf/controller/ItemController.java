@@ -56,7 +56,7 @@ public class ItemController {
 //        return Result.success();
 //    }
 //
-@Operation(summary = "上传失物/招领图片", description = "发布帖子前，先调用此接口上传图片换取URL")
+@Operation(summary = "上传失物/招领图片", description = "发布/修改帖子前，先调用此接口上传图片换取URL")
 @PostMapping("/image")
 public Result<String> uploadItemImage(
         @Schema(description = "图片文件", required = true) @RequestParam("file") MultipartFile file) {
