@@ -29,9 +29,9 @@ public class UserRegisterDTO {
     @Schema(description = "密码，6-20位，至少包含一个字母和一个数字", required = true)
     private String password;
 
-    @NotNull(message = "角色不能为空") // 整数非空用 @NotNull
-    @Min(value = 0, message = "角色格式不正确") // 限制最小值为 0
-    @Max(value = 1, message = "角色格式不正确") // 限制最大值为 1
+    @NotNull(message = "角色不能为空")
+    @Min(value = 0, message = "角色格式不正确")
+    @Max(value = 1, message = "角色格式不正确")
     @Schema(description = "角色（0-学生，1-管理员）", required = true, example = "0")
     private Integer role;
 

@@ -13,12 +13,11 @@ import com.choco.smartlf.entity.dto.UserUpdateDTO;
 import com.choco.smartlf.entity.pojo.User;
 import com.choco.smartlf.entity.vo.UserInfoVO;
 import com.choco.smartlf.entity.vo.UserLoginVO;
-import com.choco.smartlf.enums.CheckType;
+import com.choco.smartlf.enums.*;
 import com.choco.smartlf.exception.BusinessException;
 import com.choco.smartlf.mapper.UserMapper;
 import com.choco.smartlf.service.UserService;
 import com.choco.smartlf.utils.Constant;
-import com.choco.smartlf.utils.ErrorMsgConstant;
 import com.choco.smartlf.utils.ImageNameUtil;
 import com.choco.smartlf.utils.JwtUtil;
 import lombok.RequiredArgsConstructor;
@@ -31,9 +30,6 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-
-import static jakarta.servlet.http.HttpServletResponse.SC_FORBIDDEN;
-import static jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED;
 
 /**
  * @author Choco
@@ -59,16 +55,16 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     @Override
     public void registerUser(UserRegisterDTO dto) {
         //看身份，如果是管理员先验证密钥
-        if (dto.getRole().equals(Constant.ADMIN_ROLE)) {
+        if (dto.getRole().equals(RoleEnum.ADMIN.getCode())) {
             if (!dto.getSecretKey().equals(adminSecretKey)) {
-                throw new BusinessException(SC_UNAUTHORIZED, "管理员密钥错误！");
+                throw new BusinessException(ResultCodeEnum.UNAUTHORIZED, ErrorMsgEnum.ADMIN_SECRET_KEY_ERROR);
             }
         }
         //验证用户名、邮箱、手机号是否重复
         LambdaQueryWrapper<User> queryWrapper = getUserLambdaQueryWrapper(dto.getUsername(), dto.getEmail(), dto.getPhone());
         List<User> users = userMapper.selectList(queryWrapper);
         if (!users.isEmpty()) {
-            throw new BusinessException(SC_UNAUTHORIZED, "用户名、邮箱或手机号已存在！");
+            throw new BusinessException(ResultCodeEnum.UNAUTHORIZED, ErrorMsgEnum.USERNAME_EMAIL_OR_PHONE_EXIST);
         }
         //无重复，插入数据库
         User user = new User();
@@ -91,11 +87,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         User user = userMapper.selectOne(queryWrapper);
         //查不到用户或者密码对不上
         if (user == null || !BCrypt.checkpw(dto.getPassword(), user.getPassword())) {
-            throw new BusinessException(SC_UNAUTHORIZED, "用户不存在或密码错误");
+            throw new BusinessException(ResultCodeEnum.UNAUTHORIZED, ErrorMsgEnum.INVALID_USERNAME_OR_PASSWORD);
         }
         //验证是否被封禁
-        if (user.getStatus().equals(Constant.STATUS_BANNED)) {
-            throw new BusinessException(SC_FORBIDDEN, "用户已封禁！请联系管理员");
+        if (user.getStatus().equals(UserStatusEnum.BANNED.getCode())) {
+            throw new BusinessException(ResultCodeEnum.FORBIDDEN, ErrorMsgEnum.USER_BANNED);
         }
         //将用户ID，用户角色，用户名封装，生成token
         String token = JwtUtil.createJwtToken(user.getId(), user.getRole(), user.getUsername());
@@ -135,7 +131,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         //根据用户id去查询用户信息
         User user = getById(userId);
         if (user == null) {
-            throw new BusinessException(ErrorMsgConstant.USER_NOT_FOUND);
+            throw new BusinessException(ErrorMsgEnum.USER_NOT_FOUND);
         }
         UserInfoVO vo = new UserInfoVO();
         BeanUtil.copyProperties(user, vo);
@@ -151,12 +147,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         String nickname = dto.getNickname();
         if (!StrUtil.isBlank(email)) {
             if (isExist(CheckType.EMAIL, email)) {
-                throw new BusinessException(ErrorMsgConstant.EMAIL_EXIST);
+                throw new BusinessException(ErrorMsgEnum.EMAIL_EXIST);
             }
         }
         if (!StrUtil.isBlank(phone)) {
             if (isExist(CheckType.PHONE, phone)) {
-                throw new BusinessException(ErrorMsgConstant.PHONE_EXIST);
+                throw new BusinessException(ErrorMsgEnum.PHONE_EXIST);
             }
         }
         //对昵称，不用查重，就不验了
@@ -174,15 +170,15 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         //通过userId查询用户
         User user = getById(userId);
         if (user == null) {
-            throw new BusinessException(ErrorMsgConstant.USER_NOT_FOUND);
+            throw new BusinessException(ErrorMsgEnum.USER_NOT_FOUND);
         }
         //校验旧密码是否正确
         if (!BCrypt.checkpw(dto.getOldPassword(), user.getPassword())) {
-            throw new BusinessException(ErrorMsgConstant.PASSWORD_ERROR);
+            throw new BusinessException(ErrorMsgEnum.PASSWORD_ERROR);
         }
         //校验新密码不能和旧密码一样
         if (BCrypt.checkpw(dto.getNewPassword(), user.getPassword())) {
-            throw new BusinessException(ErrorMsgConstant.PASSWORD_SAME_ERROR);
+            throw new BusinessException(ErrorMsgEnum.PASSWORD_SAME_ERROR);
         }
         //加密新密码并保存
         User updateUser = new User();
@@ -200,7 +196,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 
     @Override
     public String updateAvatar(Long userId, MultipartFile file) {
-        if (file.isEmpty()) throw new BusinessException(ErrorMsgConstant.INVALID_FILE);
+        if (file.isEmpty()) throw new BusinessException(ErrorMsgEnum.INVALID_FILE);
 
         // 生成文件名
         String imageName = ImageNameUtil.getImageName(file.getOriginalFilename());
@@ -218,7 +214,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         try {
             file.transferTo(new java.io.File(fullSavePath));
         } catch (IOException e) {
-            throw new BusinessException(ErrorMsgConstant.FILE_UPLOAD_ERROR);
+            throw new BusinessException(ErrorMsgEnum.FILE_UPLOAD_ERROR);
         }
 
         // 存到数据库（仅网络访问URL）

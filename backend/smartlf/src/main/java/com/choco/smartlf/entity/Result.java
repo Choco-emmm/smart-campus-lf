@@ -1,5 +1,6 @@
 package com.choco.smartlf.entity;
 
+import com.choco.smartlf.enums.ResultCodeEnum;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -21,29 +22,43 @@ public class Result<T> {
 
     public static <T> Result<T> success() {
         Result<T> result = new Result<>();
-        result.code = 1;
-        result.msg = "success";
+        result.code = ResultCodeEnum.SUCCESS.getCode();
+        result.msg = ResultCodeEnum.SUCCESS.getMessage();
         return result;
     }
 
     public static <T> Result<T> success(T data) {
         Result<T> result = new Result<>();
         result.data = data;
-        result.code = 1;
-        result.msg = "success";
+        result.code = ResultCodeEnum.SUCCESS.getCode();
+        result.msg = ResultCodeEnum.SUCCESS.getMessage();
         return result;
     }
 
     public static <T> Result<T> error(String msg) {
         Result<T> result = new Result<>();
         result.msg = msg;
-        result.code = 0;
+        result.code = ResultCodeEnum.FAIL.getCode();
         return result;
     }
 
     public static <T> Result<T> error(Integer code, String msg) {
         Result<T> result = new Result<>();
         result.code = code;
+        result.msg = msg;
+        return result;
+    }
+
+    public static <T> Result<T> error(ResultCodeEnum resultCodeEnum) {
+        Result<T> result = new Result<>();
+        result.code = resultCodeEnum.getCode();
+        result.msg = resultCodeEnum.getMessage();
+        return result;
+    }
+
+    public static <T> Result<T> error(ResultCodeEnum resultCodeEnum, String msg) {
+        Result<T> result = new Result<>();
+        result.code = resultCodeEnum.getCode();
         result.msg = msg;
         return result;
     }

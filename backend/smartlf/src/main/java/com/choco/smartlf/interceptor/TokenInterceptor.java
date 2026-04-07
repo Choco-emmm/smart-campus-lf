@@ -1,6 +1,9 @@
 package com.choco.smartlf.interceptor;
 
 import cn.hutool.core.util.StrUtil;
+import com.choco.smartlf.enums.ErrorMsgEnum;
+import com.choco.smartlf.enums.ResultCodeEnum;
+import com.choco.smartlf.enums.RoleEnum;
 import com.choco.smartlf.exception.BusinessException;
 import com.choco.smartlf.utils.Constant;
 import com.choco.smartlf.utils.JwtUtil;
@@ -37,7 +40,7 @@ public class TokenInterceptor implements HandlerInterceptor {
 
         // 3. 判断token是否存在
         if (StrUtil.isBlank(token)) {
-            throw new BusinessException(401, "您还未登录，请先登录！");
+            throw new BusinessException(ResultCodeEnum.UNAUTHORIZED, ErrorMsgEnum.TOKEN_NOT_LOGIN);
         }
 
         // 4. 解析令牌+存入ThreadLocal
@@ -46,27 +49,27 @@ public class TokenInterceptor implements HandlerInterceptor {
             UserContext.setData(claims);
         } catch (Exception e) {
             log.error("非法令牌解析失败：{}", e.getMessage());
-            throw new BusinessException(401, "登录状态异常，请重新登录！");
+            throw new BusinessException(ResultCodeEnum.UNAUTHORIZED, ErrorMsgEnum.TOKEN_INVALID);
         }
 
         // 5. 校验Redis中是否过期（单点登录/强制下线防线）
         String key = Constant.TOKEN_PREFIX + UserContext.getUserId();
         if(StrUtil.isBlank(stringRedisTemplate.opsForValue().get(key))){
-            throw new BusinessException(401, "登录已过期，请重新登录！");
+            throw new BusinessException(ResultCodeEnum.UNAUTHORIZED, ErrorMsgEnum.TOKEN_EXPIRED);
         }
-
         // 6. 刷新Token在Redis里的续命时间
         stringRedisTemplate.expire(key, Constant.TOKEN_EXPIRATION, TimeUnit.MINUTES);
         log.info("Token续期成功，用户ID: {}", UserContext.getUserId());
 
         // 7. 角色权限拦截
         String path = request.getRequestURI();
-        Integer role = UserContext.getUserRole();
+        Integer roleCode = UserContext.getUserRole();
+        RoleEnum role = RoleEnum.fromCode(roleCode);
 
-        if (path.contains("/student") && !role.equals(Constant.STU_ROLE)) {
-            throw new BusinessException(403, "权限不足：仅限普通学生访问");
-        } else if (path.contains("/admin") && !role.equals(Constant.ADMIN_ROLE)) {
-            throw new BusinessException(403, "权限越界：非管理员禁止访问！");
+        if (path.contains("/student") && role != RoleEnum.STUDENT) {
+            throw new BusinessException(ResultCodeEnum.FORBIDDEN, ErrorMsgEnum.PERMISSION_DENIED_STUDENT);
+        } else if (path.contains("/admin") && role != RoleEnum.ADMIN) {
+            throw new BusinessException(ResultCodeEnum.FORBIDDEN, ErrorMsgEnum.PERMISSION_DENIED_ADMIN);
         }
 
         return true;

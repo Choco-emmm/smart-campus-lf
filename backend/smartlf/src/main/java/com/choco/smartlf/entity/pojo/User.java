@@ -25,9 +25,9 @@ public class User {
     private String password;
     @Schema(description="用户头像链接")
     private String avatarUrl;
-    @Schema(description="0:学生, 1:管理员")
+    @Schema(description="0:学生, 1:管理员", implementation = com.choco.smartlf.enums.RoleEnum.class)
     private Integer role;
-    @Schema(description="0:正常, 1:封禁")
+    @Schema(description="0:正常, 1:封禁", implementation = com.choco.smartlf.enums.UserStatusEnum.class)
     private Integer status;
     @Schema(description="最后活跃时间")
     private Date lastActiveTime;
@@ -35,6 +35,6 @@ public class User {
     private Date createTime;
     @Schema(description="最后修改时间")
     private Date updateTime;
-    @Schema(description="逻辑删除（0:未删, 1:已删）")
+    @Schema(description="逻辑删除（0:未删, 1:已删）", implementation = com.choco.smartlf.enums.DeletedEnum.class)
     private Integer isDeleted;
 }

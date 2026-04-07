@@ -11,7 +11,7 @@ public class ItemInfo {
     private Long id;
     @Schema(description="发布者用户ID")
     private Long userId;
-    @Schema(description="0:丢失，1:拾取")
+    @Schema(description="0:丢失，1:拾取", implementation = com.choco.smartlf.enums.ItemTypeEnum.class)
     private Integer type;
     @Schema(description="物品标题")
     private String itemName;
@@ -21,13 +21,13 @@ public class ItemInfo {
     private String location;
     @Schema(description="公开可见的简述")
     private String publicDesc;
-    @Schema(description="0:寻找中，1:锁定中，2:已结案")
+    @Schema(description="0:寻找中，1:锁定中，2:已结案", implementation = com.choco.smartlf.enums.ItemStatusEnum.class)
     private Integer status;
-    @Schema(description="是否置顶（0:否，1:是）")
+    @Schema(description="是否置顶（0:否，1:是）", implementation = com.choco.smartlf.enums.TopEnum.class)
     private Integer isTop;
     @Schema(description="置顶结束时间")
     private Date topEndTime;
-    @Schema(description="1:高价值/敏感（强制二审）")
+    @Schema(description="1:高价值/敏感（强制二审）", implementation = com.choco.smartlf.enums.SensitiveEnum.class)
     private Integer isSensitive;
     @Schema(description="被举报次数")
     private Integer reportCount;

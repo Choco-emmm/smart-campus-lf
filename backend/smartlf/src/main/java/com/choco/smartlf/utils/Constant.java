@@ -50,7 +50,4 @@ public class Constant {
      */
     public static final Integer STATUS_NORMAL = 0;
 
-    // 私有构造防止实例化
-    private Constant() {
-    }
 }

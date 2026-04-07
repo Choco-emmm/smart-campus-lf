@@ -9,6 +9,7 @@ import com.choco.smartlf.entity.dto.UserUpdateDTO;
 import com.choco.smartlf.entity.vo.UserInfoVO;
 import com.choco.smartlf.entity.vo.UserLoginVO;
 import com.choco.smartlf.enums.CheckType;
+import com.choco.smartlf.enums.ResultCodeEnum;
 import com.choco.smartlf.exception.BusinessException;
 import com.choco.smartlf.service.UserService;
 import com.choco.smartlf.utils.UserContext;
@@ -37,7 +38,7 @@ public class UserController {
             @Schema(description = "要校验的值", required = true) @RequestParam String value) {
         // 1. 参数非空校验
         if (StrUtil.isBlank(value)) {
-            throw new BusinessException(SC_BAD_REQUEST, "校验参数不能为空");
+            throw new BusinessException(ResultCodeEnum.BAD_REQUEST, "校验参数不能为空");
         }
         // 2. 调用 Service 层进行查询看是否已有value这个字段
         boolean isExist = userService.isExist(type, value);
@@ -51,7 +52,7 @@ public class UserController {
             @Schema(description = "要校验的值", required = true) @RequestParam String value) {
         // 1. 参数非空校验
         if (StrUtil.isBlank(value)) {
-            throw new BusinessException(SC_BAD_REQUEST, "校验参数不能为空");
+            throw new BusinessException(ResultCodeEnum.BAD_REQUEST, "校验参数不能为空");
         }
         // 2. 调用 Service 层进行查询看是否已有value这个字段
         Long userId = UserContext.getUserId();
