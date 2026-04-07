@@ -14,9 +14,6 @@ public class UserRegisterDTO {
     @Schema(description = "用户名，4-16位，允许字母、数字、下划线、减号", required = true, example = "Choco2026")
     private String username;
 
-    @Schema(description = "展示昵称（不填则系统分配）", required = false, example = "用户2987")
-    private String nickname;
-
     @NotBlank(message = "手机号不能为空")
     @Pattern(regexp = Constant.PHONE_REGEX, message = "手机号格式不正确")
     @Schema(description = "手机号", required = true)

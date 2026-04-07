@@ -4,6 +4,10 @@ public class Constant {
     // 角色常量，0-学生，1-管理员
     public static final Integer STU_ROLE = 0;
     public static final Integer ADMIN_ROLE = 1;
+    /**
+     * 昵称正则：1-16位，除了空格其他都允许
+     */
+    public static final String NICKNAME_REGEX = "^[^\\s]{1,16}$";
 
     /**
      *  用户名正则：4-16位，允许字母、数字、下划线、减号
@@ -47,5 +51,6 @@ public class Constant {
     public static final Integer STATUS_NORMAL = 0;
 
     // 私有构造防止实例化
-    private Constant() {}
+    private Constant() {
+    }
 }

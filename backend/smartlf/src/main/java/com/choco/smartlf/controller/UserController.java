@@ -1,7 +1,6 @@
 package com.choco.smartlf.controller;
 
 import cn.hutool.core.util.StrUtil;
-import com.choco.smartlf.entity.dto.UpdatePasswordDTO;
 import com.choco.smartlf.entity.dto.UserLoginDTO;
 import com.choco.smartlf.entity.dto.UserRegisterDTO;
 import com.choco.smartlf.entity.Result;
@@ -18,7 +17,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 import static jakarta.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
 
@@ -40,7 +38,7 @@ public class UserController {
             throw new BusinessException(SC_BAD_REQUEST, "校验参数不能为空");
         }
         // 2. 调用 Service 层进行查询看是否已有value这个字段
-        boolean isRegistered = userService.checkUnique(type, value);
+        boolean isRegistered = userService.isExist(type, value);
         // 3. 返回结果: true 代表已被注册，false 代表未被注册(可用)
         return Result.success(isRegistered);
     }
@@ -63,10 +61,17 @@ public class UserController {
     @GetMapping("/info")
     public Result<UserInfoVO> getUserInfo() {
         // 从 ThreadLocal 中获取当前登录用户的 ID
-        Long userId = Long.valueOf(UserContext.getUserId());
+        Long userId = UserContext.getUserId();
         UserInfoVO vo = userService.getUserInfo(userId);
         return Result.success(vo);
     }
 
+    @Operation(summary = "修改基本信息", description = "支持修改昵称、邮箱、手机号")
+    @PutMapping("/info")
+    public Result<Void> updateUserInfo(@Validated @RequestBody UserUpdateDTO dto) {
+        Long userId = UserContext.getUserId();
+        userService.updateUserInfo(userId, dto);
+        return Result.success();
+    }
 
 }

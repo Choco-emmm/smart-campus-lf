@@ -8,6 +8,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.choco.smartlf.entity.dto.UserLoginDTO;
 import com.choco.smartlf.entity.dto.UserRegisterDTO;
+import com.choco.smartlf.entity.dto.UserUpdateDTO;
 import com.choco.smartlf.entity.pojo.User;
 import com.choco.smartlf.entity.vo.UserInfoVO;
 import com.choco.smartlf.entity.vo.UserLoginVO;
@@ -16,6 +17,7 @@ import com.choco.smartlf.exception.BusinessException;
 import com.choco.smartlf.mapper.UserMapper;
 import com.choco.smartlf.service.UserService;
 import com.choco.smartlf.utils.Constant;
+import com.choco.smartlf.utils.ErrorMsgConstant;
 import com.choco.smartlf.utils.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -66,13 +68,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         //密码加密
         user.setPassword(BCrypt.hashpw(dto.getPassword()));
         user.setRole(dto.getRole());
-        //校验有无昵称
-        if (StrUtil.isBlank(dto.getNickname())) {
-            //自动分配昵称，格式为用户+随机六位数数字
-            user.setNickname(Constant.NICKNAME_PREFIX + RandomUtil.randomNumbers(6));
-        } else {
-            user.setNickname(dto.getNickname());
-        }
+        //自动分配昵称，格式为用户+随机六位数数字
+        user.setNickname(createNickname());
         userMapper.insert(user);
     }
 
@@ -104,7 +101,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     }
 
     @Override
-    public boolean checkUnique(CheckType type, String value) {
+    public boolean isExist(CheckType type, String value) {
         LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
         //根据枚举类型判断
         switch (type) {
@@ -117,6 +114,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             case EMAIL:
                 wrapper.eq(User::getEmail, value);
                 break;
+            case NICKNAME:
+                wrapper.eq(User::getNickname, value);
             // 因为 type 是枚举，所以能传过来一定是对的type，不用再判断剩下的了
         }
         return exists(wrapper);
@@ -143,15 +142,58 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         return queryWrapper;
     }
 
+    private String createNickname(){
+        int flag = 1;//默认重复
+        String nickname=null;
+        while (flag == 1) {
+            //只要重复就要一直循环生成
+            nickname=Constant.NICKNAME_PREFIX + RandomUtil.randomNumbers(6);
+            if(!isExist(CheckType.NICKNAME, nickname)){
+                //不重复了就置为零，直接出循环
+                flag = 0;
+            }
+        }
+        return nickname;
+    }
+
     @Override
     public UserInfoVO getUserInfo(Long userId) {
         //根据用户id去查询用户信息
         User user = getById(userId);
-        if(user==null){
-            throw new BusinessException("用户不存在");
+        if (user == null) {
+            throw new BusinessException(ErrorMsgConstant.USER_NOT_FOUND);
         }
         UserInfoVO vo = new UserInfoVO();
         BeanUtil.copyProperties(user, vo);
         return vo;
     }
+
+    @Override
+    public void updateUserInfo(Long userId, UserUpdateDTO dto) {
+        //更新昵称、手机号、邮箱
+        //先对手机号和邮箱查重，已存在就抛异常
+        String email = dto.getEmail();
+        String phone = dto.getPhone();
+        String nickname = dto.getNickname();
+        if (!StrUtil.isBlank(email)) {
+            if (isExist(CheckType.EMAIL, email)) {
+                throw new BusinessException(ErrorMsgConstant.EMAIL_EXIST);
+            }
+        }
+        if (!StrUtil.isBlank(phone)) {
+            if (isExist(CheckType.PHONE, phone)) {
+                throw new BusinessException(ErrorMsgConstant.PHONE_EXIST);
+            }
+        }
+        //对昵称，不用查重，就不验了
+        //数据更新
+        User user = new User();
+        BeanUtil.copyProperties(dto, user);
+        //设置id
+        user.setId(userId);
+        //根据id更新数据
+        updateById(user);
+    }
+
+
 }

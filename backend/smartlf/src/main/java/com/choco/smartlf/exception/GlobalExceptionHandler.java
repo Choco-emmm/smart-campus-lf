@@ -31,15 +31,14 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public Result<Void> handleValidationException(MethodArgumentNotValidException e) {
-        // 把所有校验失败的字段信息收集起来，用换行符拼接
+        // 把所有校验失败的字段信息收集起来拼接
         String errorMsg = e.getBindingResult().getFieldErrors()
                 .stream()
                 .map(FieldError::getDefaultMessage)
-                .collect(Collectors.joining("\n"));
+                .collect(Collectors.joining("，"));
 
         log.warn("请求参数校验失败：{}", errorMsg);
 
-        // 400 是 HTTP 协议里标准的 Bad Request (请求参数错误) 状态码
         return Result.error(HttpServletResponse.SC_BAD_REQUEST, errorMsg);
     }
 
