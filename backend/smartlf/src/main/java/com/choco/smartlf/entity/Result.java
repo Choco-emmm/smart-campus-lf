@@ -4,9 +4,6 @@ import com.choco.smartlf.enums.ResultCodeEnum;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
-/**
- * 后端统一返回的结果封装类
- */
 @Data
 @Schema(description = "全局统一响应结果封装")
 public class Result<T> {
@@ -20,46 +17,35 @@ public class Result<T> {
     @Schema(description = "响应的具体数据负载")
     private T data;
 
+    // --- 成功 ---
     public static <T> Result<T> success() {
-        Result<T> result = new Result<>();
-        result.code = ResultCodeEnum.SUCCESS.getCode();
-        result.msg = ResultCodeEnum.SUCCESS.getMessage();
-        return result;
+        return success(null);
     }
 
     public static <T> Result<T> success(T data) {
         Result<T> result = new Result<>();
-        result.data = data;
-        result.code = ResultCodeEnum.SUCCESS.getCode();
-        result.msg = ResultCodeEnum.SUCCESS.getMessage();
+        result.setCode(ResultCodeEnum.SUCCESS.getCode());
+        result.setMsg(ResultCodeEnum.SUCCESS.getMessage());
+        result.setData(data);
         return result;
     }
 
-    public static <T> Result<T> error(String msg) {
-        Result<T> result = new Result<>();
-        result.msg = msg;
-        result.code = ResultCodeEnum.FAIL.getCode();
-        return result;
-    }
-
+    // --- 失败 ---
+    // 1. 直接返回底层 code 和 msg (被全局异常拦截器使用)
     public static <T> Result<T> error(Integer code, String msg) {
         Result<T> result = new Result<>();
-        result.code = code;
-        result.msg = msg;
+        result.setCode(code);
+        result.setMsg(msg);
         return result;
     }
 
+    // 2. 传入单个字符串 (默认状态码 0)
+    public static <T> Result<T> error(String msg) {
+        return error(ResultCodeEnum.FAIL.getCode(), msg);
+    }
+
+    // 3. 传入枚举
     public static <T> Result<T> error(ResultCodeEnum resultCodeEnum) {
-        Result<T> result = new Result<>();
-        result.code = resultCodeEnum.getCode();
-        result.msg = resultCodeEnum.getMessage();
-        return result;
-    }
-
-    public static <T> Result<T> error(ResultCodeEnum resultCodeEnum, String msg) {
-        Result<T> result = new Result<>();
-        result.code = resultCodeEnum.getCode();
-        result.msg = msg;
-        return result;
+        return error(resultCodeEnum.getCode(), resultCodeEnum.getMessage());
     }
 }

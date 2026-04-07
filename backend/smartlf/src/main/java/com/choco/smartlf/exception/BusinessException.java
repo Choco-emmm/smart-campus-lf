@@ -1,6 +1,5 @@
 package com.choco.smartlf.exception;
 
-import com.choco.smartlf.enums.ErrorMsgEnum;
 import com.choco.smartlf.enums.ResultCodeEnum;
 import lombok.Getter;
 
@@ -11,33 +10,21 @@ import lombok.Getter;
 public class BusinessException extends RuntimeException {
     private final Integer code;
 
-    public BusinessException(String message) {
-        super(message);
-        this.code = ResultCodeEnum.FAIL.getCode();
-    }
-
-    public BusinessException(Integer code, String message) {
-        super(message);
-        this.code = code;
-    }
-
+    // 1. 传入枚举（最常用，99%的情况用这个）
     public BusinessException(ResultCodeEnum resultCodeEnum) {
         super(resultCodeEnum.getMessage());
         this.code = resultCodeEnum.getCode();
     }
 
-    public BusinessException(ErrorMsgEnum errorMsgEnum) {
-        super(errorMsgEnum.getMessage());
-        this.code = ResultCodeEnum.FAIL.getCode();
-    }
-
-    public BusinessException(ResultCodeEnum resultCodeEnum, ErrorMsgEnum errorMsgEnum) {
-        super(errorMsgEnum.getMessage());
+    // 2. 传入枚举 + 自定义提示（偶尔想覆盖枚举默认文字时用）
+    public BusinessException(ResultCodeEnum resultCodeEnum, String customMessage) {
+        super(customMessage);
         this.code = resultCodeEnum.getCode();
     }
 
-    public BusinessException(ResultCodeEnum resultCodeEnum, String message) {
+    // 3. 纯文本兜底（兼容一些零碎的报错，状态码默认为 0）
+    public BusinessException(String message) {
         super(message);
-        this.code = resultCodeEnum.getCode();
+        this.code = ResultCodeEnum.FAIL.getCode();
     }
 }

@@ -13,7 +13,10 @@ import com.choco.smartlf.entity.dto.UserUpdateDTO;
 import com.choco.smartlf.entity.pojo.User;
 import com.choco.smartlf.entity.vo.UserInfoVO;
 import com.choco.smartlf.entity.vo.UserLoginVO;
-import com.choco.smartlf.enums.*;
+import com.choco.smartlf.enums.CheckType;
+import com.choco.smartlf.enums.ResultCodeEnum;
+import com.choco.smartlf.enums.RoleEnum;
+import com.choco.smartlf.enums.UserStatusEnum;
 import com.choco.smartlf.exception.BusinessException;
 import com.choco.smartlf.mapper.UserMapper;
 import com.choco.smartlf.service.UserService;
@@ -41,6 +44,7 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         implements UserService {
+
     // 自动读取环境变量或 yaml 里的密钥
     @Value("${system.admin-secret-key:QG-Studio-Super-Key}")
     private String adminSecretKey;
@@ -57,14 +61,16 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         //看身份，如果是管理员先验证密钥
         if (dto.getRole().equals(RoleEnum.ADMIN.getCode())) {
             if (!dto.getSecretKey().equals(adminSecretKey)) {
-                throw new BusinessException(ResultCodeEnum.UNAUTHORIZED, ErrorMsgEnum.ADMIN_SECRET_KEY_ERROR);
+                // 【修改点】直接抛出统一枚举
+                throw new BusinessException(ResultCodeEnum.ADMIN_KEY_ERROR);
             }
         }
         //验证用户名、邮箱、手机号是否重复
         LambdaQueryWrapper<User> queryWrapper = getUserLambdaQueryWrapper(dto.getUsername(), dto.getEmail(), dto.getPhone());
         List<User> users = userMapper.selectList(queryWrapper);
         if (!users.isEmpty()) {
-            throw new BusinessException(ResultCodeEnum.UNAUTHORIZED, ErrorMsgEnum.USERNAME_EMAIL_OR_PHONE_EXIST);
+            // 【修改点】直接抛出统一枚举
+            throw new BusinessException(ResultCodeEnum.USER_ALREADY_EXISTS);
         }
         //无重复，插入数据库
         User user = new User();
@@ -85,13 +91,16 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         String account = dto.getAccount();
         LambdaQueryWrapper<User> queryWrapper = getUserLambdaQueryWrapper(account);
         User user = userMapper.selectOne(queryWrapper);
+
         //查不到用户或者密码对不上
         if (user == null || !BCrypt.checkpw(dto.getPassword(), user.getPassword())) {
-            throw new BusinessException(ResultCodeEnum.UNAUTHORIZED, ErrorMsgEnum.INVALID_USERNAME_OR_PASSWORD);
+            // 【修改点】因为枚举里定义的是"用户不存在"和"密码错误"，这里可以用自定义提示信息覆盖默认信息
+            throw new BusinessException(ResultCodeEnum.USER_NOT_FOUND, "用户名或密码错误");
         }
         //验证是否被封禁
         if (user.getStatus().equals(UserStatusEnum.BANNED.getCode())) {
-            throw new BusinessException(ResultCodeEnum.FORBIDDEN, ErrorMsgEnum.USER_BANNED);
+            // 【修改点】直接抛出统一枚举
+            throw new BusinessException(ResultCodeEnum.USER_BANNED);
         }
         //将用户ID，用户角色，用户名封装，生成token
         String token = JwtUtil.createJwtToken(user.getId(), user.getRole(), user.getUsername());
@@ -120,7 +129,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             case EMAIL:
                 wrapper.eq(User::getEmail, value);
                 break;
-            // 因为 type 是枚举，所以能传过来一定是对的type，不用再判断剩下的了
         }
         return exists(wrapper);
 
@@ -131,7 +139,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         //根据用户id去查询用户信息
         User user = getById(userId);
         if (user == null) {
-            throw new BusinessException(ErrorMsgEnum.USER_NOT_FOUND);
+            throw new BusinessException(ResultCodeEnum.USER_NOT_FOUND);
         }
         UserInfoVO vo = new UserInfoVO();
         BeanUtil.copyProperties(user, vo);
@@ -141,21 +149,25 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     @Override
     public void updateUserInfo(Long userId, UserUpdateDTO dto) {
         //更新昵称、手机号、邮箱
-        //先对手机号和邮箱查重，已存在就抛异常
         String email = dto.getEmail();
         String phone = dto.getPhone();
-        String nickname = dto.getNickname();
+
         if (!StrUtil.isBlank(email)) {
-            if (isExist(CheckType.EMAIL, email)) {
-                throw new BusinessException(ErrorMsgEnum.EMAIL_EXIST);
+            // 如果查到存在，并且不是当前用户自己的，才抛异常
+            LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(User::getEmail, email).ne(User::getId, userId);
+            if (this.exists(wrapper)) {
+                throw new BusinessException(ResultCodeEnum.EMAIL_EXIST);
             }
         }
         if (!StrUtil.isBlank(phone)) {
-            if (isExist(CheckType.PHONE, phone)) {
-                throw new BusinessException(ErrorMsgEnum.PHONE_EXIST);
+            LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(User::getPhone, phone).ne(User::getId, userId);
+            if (this.exists(wrapper)) {
+                throw new BusinessException(ResultCodeEnum.PHONE_EXIST);
             }
         }
-        //对昵称，不用查重，就不验了
+
         //数据更新
         User user = new User();
         BeanUtil.copyProperties(dto, user);
@@ -170,15 +182,15 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         //通过userId查询用户
         User user = getById(userId);
         if (user == null) {
-            throw new BusinessException(ErrorMsgEnum.USER_NOT_FOUND);
+            throw new BusinessException(ResultCodeEnum.USER_NOT_FOUND);
         }
         //校验旧密码是否正确
         if (!BCrypt.checkpw(dto.getOldPassword(), user.getPassword())) {
-            throw new BusinessException(ErrorMsgEnum.PASSWORD_ERROR);
+            throw new BusinessException(ResultCodeEnum.PASSWORD_ERROR);
         }
         //校验新密码不能和旧密码一样
         if (BCrypt.checkpw(dto.getNewPassword(), user.getPassword())) {
-            throw new BusinessException(ErrorMsgEnum.PASSWORD_SAME_ERROR);
+            throw new BusinessException(ResultCodeEnum.PASSWORD_SAME_ERROR);
         }
         //加密新密码并保存
         User updateUser = new User();
@@ -196,13 +208,14 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 
     @Override
     public String updateAvatar(Long userId, MultipartFile file) {
-        if (file.isEmpty()) throw new BusinessException(ErrorMsgEnum.INVALID_FILE);
+        if (file == null || file.isEmpty()) {
+            throw new BusinessException(ResultCodeEnum.INVALID_FILE);
+        }
 
         // 生成文件名
         String imageName = ImageNameUtil.getImageName(file.getOriginalFilename());
 
         // 获得访问路径
-
         String fullSavePath = filePrefix + "avatars/" + imageName;
         // 确保父目录存在
         java.io.File destFile = new java.io.File(fullSavePath);
@@ -212,22 +225,21 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 
         // 存入本地
         try {
-            file.transferTo(new java.io.File(fullSavePath));
+            file.transferTo(destFile);
         } catch (IOException e) {
-            throw new BusinessException(ErrorMsgEnum.FILE_UPLOAD_ERROR);
+            log.error("文件上传失败", e);
+            throw new BusinessException(ResultCodeEnum.FILE_UPLOAD_ERROR);
         }
 
         // 存到数据库（仅网络访问URL）
-        String accessUrl =  "/images/avatars/" + imageName;;
+        String accessUrl = "/images/avatars/" + imageName;
 
         User updateUser = new User();
         updateUser.setId(userId);
         updateUser.setAvatarUrl(accessUrl);
         updateById(updateUser);
 
-        //生成网络访问 URL (存入数据库并返回)
-                // 这里要对应 WebConfig 里的
-       return accessUrl;
+        return accessUrl;
     }
 
     private LambdaQueryWrapper<User> getUserLambdaQueryWrapper(String username, String email, String phone) {
@@ -250,9 +262,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         return queryWrapper;
     }
 
-    private String createNickname(){
+    private String createNickname() {
         return Constant.NICKNAME_PREFIX + RandomUtil.randomNumbers(6);
     }
-
-
 }

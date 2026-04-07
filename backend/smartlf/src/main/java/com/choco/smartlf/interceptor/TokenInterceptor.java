@@ -1,7 +1,6 @@
 package com.choco.smartlf.interceptor;
 
 import cn.hutool.core.util.StrUtil;
-import com.choco.smartlf.enums.ErrorMsgEnum;
 import com.choco.smartlf.enums.ResultCodeEnum;
 import com.choco.smartlf.enums.RoleEnum;
 import com.choco.smartlf.exception.BusinessException;
@@ -40,7 +39,7 @@ public class TokenInterceptor implements HandlerInterceptor {
 
         // 3. 判断token是否存在
         if (StrUtil.isBlank(token)) {
-            throw new BusinessException(ResultCodeEnum.UNAUTHORIZED, ErrorMsgEnum.TOKEN_NOT_LOGIN);
+            throw new BusinessException(ResultCodeEnum.UNAUTHORIZED);
         }
 
         // 4. 解析令牌+存入ThreadLocal
@@ -49,13 +48,13 @@ public class TokenInterceptor implements HandlerInterceptor {
             UserContext.setData(claims);
         } catch (Exception e) {
             log.error("非法令牌解析失败：{}", e.getMessage());
-            throw new BusinessException(ResultCodeEnum.UNAUTHORIZED, ErrorMsgEnum.TOKEN_INVALID);
+            throw new BusinessException(ResultCodeEnum.UNAUTHORIZED);
         }
 
         // 5. 校验Redis中是否过期（单点登录/强制下线防线）
         String key = Constant.TOKEN_PREFIX + UserContext.getUserId();
         if(StrUtil.isBlank(stringRedisTemplate.opsForValue().get(key))){
-            throw new BusinessException(ResultCodeEnum.UNAUTHORIZED, ErrorMsgEnum.TOKEN_EXPIRED);
+            throw new BusinessException(ResultCodeEnum.UNAUTHORIZED);
         }
         // 6. 刷新Token在Redis里的续命时间
         stringRedisTemplate.expire(key, Constant.TOKEN_EXPIRATION, TimeUnit.MINUTES);
@@ -67,9 +66,9 @@ public class TokenInterceptor implements HandlerInterceptor {
         RoleEnum role = RoleEnum.fromCode(roleCode);
 
         if (path.contains("/student") && role != RoleEnum.STUDENT) {
-            throw new BusinessException(ResultCodeEnum.FORBIDDEN, ErrorMsgEnum.PERMISSION_DENIED_STUDENT);
+            throw new BusinessException(ResultCodeEnum.FORBIDDEN);
         } else if (path.contains("/admin") && role != RoleEnum.ADMIN) {
-            throw new BusinessException(ResultCodeEnum.FORBIDDEN, ErrorMsgEnum.PERMISSION_DENIED_ADMIN);
+            throw new BusinessException(ResultCodeEnum.FORBIDDEN);
         }
 
         return true;

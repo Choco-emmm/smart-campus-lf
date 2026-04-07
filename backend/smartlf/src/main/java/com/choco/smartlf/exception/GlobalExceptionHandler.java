@@ -17,6 +17,15 @@ import java.util.stream.Collectors;
 public class GlobalExceptionHandler {
 
     /**
+     * 兜底防线：捕获系统里所有意料之外的 Exception (比如空指针、SQL报错)
+     */
+    @ExceptionHandler(Exception.class)
+    public Result<Void> handleSystemException(Exception e) {
+        log.error("系统内部异常：", e);
+        return Result.error(e.getMessage());
+    }
+
+    /**
      * 捕获我们刚才自定义的 BusinessException
      */
     @ExceptionHandler(BusinessException.class)
@@ -40,15 +49,6 @@ public class GlobalExceptionHandler {
         log.warn("请求参数校验失败：{}", errorMsg);
 
         return Result.error(HttpServletResponse.SC_BAD_REQUEST, errorMsg);
-    }
-
-    /**
-     * 兜底防线：捕获系统里所有意料之外的 Exception (比如空指针、SQL报错)
-     */
-    @ExceptionHandler(Exception.class)
-    public Result<Void> handleSystemException(Exception e) {
-        log.error("系统内部异常：", e);
-        return Result.error(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "服务器开小差了，请联系管理员");
     }
 
     /**
