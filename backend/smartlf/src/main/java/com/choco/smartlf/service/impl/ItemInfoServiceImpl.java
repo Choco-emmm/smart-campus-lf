@@ -5,12 +5,14 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.collection.ListUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 
 import com.choco.smartlf.entity.dto.ItemPublishDTO;
 import com.choco.smartlf.entity.pojo.ItemDetail;
 import com.choco.smartlf.entity.pojo.ItemInfo;
 import com.choco.smartlf.entity.pojo.ItemSecure;
+import com.choco.smartlf.entity.pojo.User;
 import com.choco.smartlf.entity.vo.ItemDetailVO;
 import com.choco.smartlf.enums.ResultCodeEnum;
 import com.choco.smartlf.exception.BusinessException;
@@ -18,6 +20,7 @@ import com.choco.smartlf.mapper.ItemInfoMapper;
 import com.choco.smartlf.service.ItemDetailService;
 import com.choco.smartlf.service.ItemInfoService;
 import com.choco.smartlf.service.ItemSecureService;
+import com.choco.smartlf.service.UserService;
 import com.choco.smartlf.utils.ImageNameUtil;
 import com.choco.smartlf.utils.UserContext;
 import lombok.RequiredArgsConstructor;
@@ -46,6 +49,7 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
 
     private final ItemDetailService itemDetailService;
     private final ItemSecureService itemSecureService;
+    private final UserService userService;
 
     @Transactional(rollbackFor = Exception.class)
     @Override
@@ -128,7 +132,40 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
 
     @Override
     public ItemDetailVO getItemDetail(Long id) {
-        return null;
+        //查主表和详情表
+        ItemInfo itemInfo = this.getById(id);
+        if (itemInfo == null) {
+            throw new BusinessException("该物品信息不存在或已被删除");
+        }
+        ItemDetail itemDetail = itemDetailService.getById(id);
+
+        //组装 VO
+        ItemDetailVO vo = new ItemDetailVO();
+        BeanUtil.copyProperties(itemInfo, vo);
+        if (itemDetail != null) {
+            //有详情信息
+            vo.setSemiPublicDesc(itemDetail.getSemiPublicDesc());
+            if (StrUtil.isNotBlank(itemDetail.getImagesUrl())) {
+                vo.setImagesUrlList(JSONUtil.toList(itemDetail.getImagesUrl(), String.class));
+            }
+            vo.setAiGeneratedDesc(itemDetail.getAiGeneratedDesc());
+        }
+
+        //去核验表里查一下有没有这个物品的记录
+        long secureCount = itemSecureService.count(
+                new LambdaQueryWrapper<ItemSecure>().eq(ItemSecure::getItemId, id)
+        );
+
+        //如果 count > 0，说明发帖人存了暗号和联系方式，设置为 true
+        vo.setHasSecureCheck(secureCount > 0);
+
+        //获取发布者信息
+        User publisher = userService.getById(itemInfo.getUserId());
+        vo.setPublisherNickname(publisher.getNickname());
+        vo.setPublisherAvatarUrl(publisher.getAvatarUrl());
+
+        log.info("物品详情查询成功，物品ID: {}", id);
+        return vo;
     }
 }
 

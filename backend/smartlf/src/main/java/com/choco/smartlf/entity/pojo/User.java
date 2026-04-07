@@ -10,6 +10,7 @@ import lombok.Data;
 
 @Data
 public class User {
+    @TableId(type = IdType.AUTO)
     @Schema(description="主键")
     private Long id;
     @Schema(description="用户名，全局唯一")

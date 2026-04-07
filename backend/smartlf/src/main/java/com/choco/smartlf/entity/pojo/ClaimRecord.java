@@ -2,11 +2,15 @@ package com.choco.smartlf.entity.pojo;
 
 
 import java.util.Date;
+
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 @Data
 public class ClaimRecord {
+    @TableId(type = IdType.AUTO)
     @Schema(description="申请主键")
     private Long id;
     @Schema(description="申请的物品ID")
