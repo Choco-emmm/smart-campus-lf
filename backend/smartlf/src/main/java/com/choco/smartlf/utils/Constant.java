@@ -33,6 +33,11 @@ public class Constant {
      * Redis中存储token的key
      */
     public static final String TOKEN_PREFIX = "user:token:";
+
+    /**
+     * 用户活跃时间key
+     */
+    public static final String ACTIVE_TIME_KEY = "user:active:time";
     /**
      * 过期时间
      */

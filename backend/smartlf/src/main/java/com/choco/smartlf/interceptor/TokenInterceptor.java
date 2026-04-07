@@ -19,6 +19,8 @@ import org.springframework.web.servlet.HandlerInterceptor;
 
 import java.util.concurrent.TimeUnit;
 
+import static com.choco.smartlf.utils.Constant.ACTIVE_TIME_KEY;
+
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -70,6 +72,14 @@ public class TokenInterceptor implements HandlerInterceptor {
         } else if (path.contains("/admin") && role != RoleEnum.ADMIN) {
             throw new BusinessException(ResultCodeEnum.FORBIDDEN);
         }
+
+        // 8. 记录用户最后活跃时间到 Redis Hash 中
+        // Hash结构: Key为全局唯一标识, Field为用户ID, Value为当前时间戳
+        stringRedisTemplate.opsForHash().put(
+                ACTIVE_TIME_KEY,
+                UserContext.getUserId().toString(),
+                String.valueOf(System.currentTimeMillis())
+        );
 
         return true;
     }

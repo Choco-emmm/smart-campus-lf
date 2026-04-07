@@ -28,6 +28,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -50,75 +51,82 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     private String adminSecretKey;
 
     // 自动读取环境变量或 yaml 里的文件存储的前缀
-    @Value("${system.file-prefix:D:/drms/upload/}")
+    @Value("${system.file-prefix:D:/lfFile/}")
     private String filePrefix;
 
     private final UserMapper userMapper;
     private final StringRedisTemplate redisTemplate;
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void registerUser(UserRegisterDTO dto) {
-        //看身份，如果是管理员先验证密钥
+        log.info("开始注册新用户，用户名: {}, 角色: {}", dto.getUsername(), dto.getRole());
+
+        // 看身份，如果是管理员先验证密钥
         if (dto.getRole().equals(RoleEnum.ADMIN.getCode())) {
             if (!dto.getSecretKey().equals(adminSecretKey)) {
-                // 【修改点】直接抛出统一枚举
+                log.warn("管理员注册失败：密钥错误。提交用户名: {}", dto.getUsername());
                 throw new BusinessException(ResultCodeEnum.ADMIN_KEY_ERROR);
             }
         }
-        //验证用户名、邮箱、手机号是否重复
+
+        // 验证用户名、邮箱、手机号是否重复
         LambdaQueryWrapper<User> queryWrapper = getUserLambdaQueryWrapper(dto.getUsername(), dto.getEmail(), dto.getPhone());
-        List<User> users = userMapper.selectList(queryWrapper);
-        if (!users.isEmpty()) {
-            // 【修改点】直接抛出统一枚举
+        if (this.exists(queryWrapper)) {
+            log.warn("注册失败：用户名/邮箱/手机号已存在。提交数据: {}", dto.getUsername());
             throw new BusinessException(ResultCodeEnum.USER_ALREADY_EXISTS);
         }
-        //无重复，插入数据库
+
+        // 无重复，插入数据库
         User user = new User();
         user.setUsername(dto.getUsername());
         user.setEmail(dto.getEmail());
         user.setPhone(dto.getPhone());
-        //密码加密
-        user.setPassword(BCrypt.hashpw(dto.getPassword()));
         user.setRole(dto.getRole());
-        //自动分配昵称，格式为用户+随机六位数数字
+        // 密码加密（日志严禁记录明文密码）
+        user.setPassword(BCrypt.hashpw(dto.getPassword()));
+        // 自动分配昵称
         user.setNickname(createNickname());
-        userMapper.insert(user);
+
+        this.save(user);
+        log.info("用户注册成功，生成用户ID: {}, 昵称: {}", user.getId(), user.getNickname());
     }
 
     @Override
     public UserLoginVO login(UserLoginDTO dto) {
-        //根据传来的账号查询用户
-        String account = dto.getAccount();
-        LambdaQueryWrapper<User> queryWrapper = getUserLambdaQueryWrapper(account);
-        User user = userMapper.selectOne(queryWrapper);
+        log.info("用户尝试登录，账号: {}", dto.getAccount());
 
-        //查不到用户或者密码对不上
+        // 根据传来的账号查询用户
+        User user = userMapper.selectOne(getUserLambdaQueryWrapper(dto.getAccount()));
+
+        // 查不到用户或者密码对不上
         if (user == null || !BCrypt.checkpw(dto.getPassword(), user.getPassword())) {
-            // 【修改点】因为枚举里定义的是"用户不存在"和"密码错误"，这里可以用自定义提示信息覆盖默认信息
+            log.warn("登录失败：账号或密码错误。提交账号: {}", dto.getAccount());
             throw new BusinessException(ResultCodeEnum.USER_NOT_FOUND, "用户名或密码错误");
         }
-        //验证是否被封禁
+
+        // 验证是否被封禁
         if (user.getStatus().equals(UserStatusEnum.BANNED.getCode())) {
-            // 【修改点】直接抛出统一枚举
+            log.warn("登录失败：账号已被封禁。用户ID: {}", user.getId());
             throw new BusinessException(ResultCodeEnum.USER_BANNED);
         }
-        //将用户ID，用户角色，用户名封装，生成token
+
+        // 生成token
         String token = JwtUtil.createJwtToken(user.getId(), user.getRole(), user.getUsername());
-        //将token存入redis并设置过期时间
+
+        // 将token存入redis并设置过期时间
         String key = Constant.TOKEN_PREFIX + user.getId();
-        redisTemplate.opsForValue().set(key, token);
-        //设置过期时间
-        redisTemplate.expire(key, Constant.TOKEN_EXPIRATION, TimeUnit.MINUTES);
+        redisTemplate.opsForValue().set(key, token, Constant.TOKEN_EXPIRATION, TimeUnit.MINUTES);
 
-        //返回登录信息
+        log.info("登录成功，用户ID: {}, 昵称: {}, Token已存入Redis", user.getId(), user.getNickname());
+
+        // 返回登录信息
         return new UserLoginVO(token, user.getId(), user.getUsername(), user.getNickname(), user.getRole());
-
     }
 
     @Override
     public boolean isExist(CheckType type, String value) {
         LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
-        //根据枚举类型判断
         switch (type) {
             case USERNAME:
                 wrapper.eq(User::getUsername, value);
@@ -131,14 +139,13 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
                 break;
         }
         return exists(wrapper);
-
     }
 
     @Override
     public UserInfoVO getUserInfo(Long userId) {
-        //根据用户id去查询用户信息
         User user = getById(userId);
         if (user == null) {
+            log.warn("获取用户信息失败：ID {} 不存在", userId);
             throw new BusinessException(ResultCodeEnum.USER_NOT_FOUND);
         }
         UserInfoVO vo = new UserInfoVO();
@@ -147,119 +154,130 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void updateUserInfo(Long userId, UserUpdateDTO dto) {
-        //更新昵称、手机号、邮箱
-        String email = dto.getEmail();
-        String phone = dto.getPhone();
+        log.info("修改个人信息，用户ID: {}, 提交数据: {}", userId, dto);
 
-        if (!StrUtil.isBlank(email)) {
-            // 如果查到存在，并且不是当前用户自己的，才抛异常
+        // 查重逻辑：确保新手机号/邮箱没有被【其他用户】占用
+        if (StrUtil.isNotBlank(dto.getEmail())) {
             LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
-            wrapper.eq(User::getEmail, email).ne(User::getId, userId);
+            wrapper.eq(User::getEmail, dto.getEmail()).ne(User::getId, userId);
             if (this.exists(wrapper)) {
+                log.warn("更新信息失败：邮箱 {} 已被占用。操作人ID: {}", dto.getEmail(), userId);
                 throw new BusinessException(ResultCodeEnum.EMAIL_EXIST);
             }
         }
-        if (!StrUtil.isBlank(phone)) {
+        if (StrUtil.isNotBlank(dto.getPhone())) {
             LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
-            wrapper.eq(User::getPhone, phone).ne(User::getId, userId);
+            wrapper.eq(User::getPhone, dto.getPhone()).ne(User::getId, userId);
             if (this.exists(wrapper)) {
+                log.warn("更新信息失败：手机号 {} 已被占用。操作人ID: {}", dto.getPhone(), userId);
                 throw new BusinessException(ResultCodeEnum.PHONE_EXIST);
             }
         }
 
-        //数据更新
+        // 数据更新
         User user = new User();
         BeanUtil.copyProperties(dto, user);
-        //设置id
         user.setId(userId);
-        //根据id更新数据
+
         updateById(user);
+        log.info("用户信息更新成功，用户ID: {}", userId);
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void updatePassword(Long userId, UpdatePasswordDTO dto) {
-        //通过userId查询用户
+        log.info("修改密码操作，用户ID: {}", userId);
+
         User user = getById(userId);
         if (user == null) {
             throw new BusinessException(ResultCodeEnum.USER_NOT_FOUND);
         }
-        //校验旧密码是否正确
+
+        // 校验旧密码
         if (!BCrypt.checkpw(dto.getOldPassword(), user.getPassword())) {
+            log.warn("修改密码失败：原密码输入错误。用户ID: {}", userId);
             throw new BusinessException(ResultCodeEnum.PASSWORD_ERROR);
         }
-        //校验新密码不能和旧密码一样
+
+        // 校验新密码不能和旧密码一样
         if (BCrypt.checkpw(dto.getNewPassword(), user.getPassword())) {
+            log.warn("修改密码失败：新密码与旧密码相同。用户ID: {}", userId);
             throw new BusinessException(ResultCodeEnum.PASSWORD_SAME_ERROR);
         }
-        //加密新密码并保存
+
+        // 加密新密码并保存
         User updateUser = new User();
         updateUser.setId(userId);
         updateUser.setPassword(BCrypt.hashpw(dto.getNewPassword()));
+
         this.updateById(updateUser);
+        log.info("密码修改成功，用户ID: {}", userId);
     }
 
     @Override
     public boolean isSame(Long userId, String value) {
-        //校验所填旧密码是否与原密码相同
         User user = getById(userId);
         return BCrypt.checkpw(value, user.getPassword());
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public String updateAvatar(Long userId, MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new BusinessException(ResultCodeEnum.INVALID_FILE);
         }
 
-        // 生成文件名
-        String imageName = ImageNameUtil.getImageName(file.getOriginalFilename());
+        log.info("上传头像，用户ID: {}, 原始文件名: {}, 大小: {} bytes",
+                userId, file.getOriginalFilename(), file.getSize());
 
-        // 获得访问路径
+        // 生成唯一文件名
+        String imageName = ImageNameUtil.getImageName(file.getOriginalFilename());
         String fullSavePath = filePrefix + "avatars/" + imageName;
-        // 确保父目录存在
+
         java.io.File destFile = new java.io.File(fullSavePath);
+
+        // 确保父目录存在
         if (!destFile.getParentFile().exists()) {
-            destFile.getParentFile().mkdirs();
+            boolean created = destFile.getParentFile().mkdirs();
+            log.info("创建头像存储目录: {}, 结果: {}", destFile.getParentFile().getPath(), created);
         }
 
         // 存入本地
         try {
             file.transferTo(destFile);
         } catch (IOException e) {
-            log.error("文件上传失败", e);
+            log.error("物理文件保存失败！用户ID: {}, 目标路径: {}", userId, fullSavePath, e);
             throw new BusinessException(ResultCodeEnum.FILE_UPLOAD_ERROR);
         }
 
-        // 存到数据库（仅网络访问URL）
+        // 拼接网络访问 URL 并存到数据库
         String accessUrl = "/images/avatars/" + imageName;
-
         User updateUser = new User();
         updateUser.setId(userId);
         updateUser.setAvatarUrl(accessUrl);
+
         updateById(updateUser);
+        log.info("头像更新成功，用户ID: {}, 访问路径: {}", userId, accessUrl);
 
         return accessUrl;
     }
 
+    // --- 私有辅助方法 ---
+
     private LambdaQueryWrapper<User> getUserLambdaQueryWrapper(String username, String email, String phone) {
-        LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(User::getUsername, username)
-                .or()
-                .eq(User::getEmail, email)
-                .or()
-                .eq(User::getPhone, phone);
-        return queryWrapper;
+        return new LambdaQueryWrapper<User>()
+                .eq(User::getUsername, username)
+                .or().eq(User::getEmail, email)
+                .or().eq(User::getPhone, phone);
     }
 
     private LambdaQueryWrapper<User> getUserLambdaQueryWrapper(String account) {
-        LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(User::getUsername, account)
-                .or()
-                .eq(User::getEmail, account)
-                .or()
-                .eq(User::getPhone, account);
-        return queryWrapper;
+        return new LambdaQueryWrapper<User>()
+                .eq(User::getUsername, account)
+                .or().eq(User::getEmail, account)
+                .or().eq(User::getPhone, account);
     }
 
     private String createNickname() {
