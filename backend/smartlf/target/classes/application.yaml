@@ -25,3 +25,4 @@ mybatis:
   map-underscore-to-camel-case: true
 system:
   admin-secret-key: ${ADMIN_SECRET_KEY:QG-Studio-2026}
+  file-prefix: ${SYSTEM.FILE-PREFIX:D:/upload/}

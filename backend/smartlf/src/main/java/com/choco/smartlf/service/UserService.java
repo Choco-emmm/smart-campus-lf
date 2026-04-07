@@ -8,6 +8,7 @@ import com.choco.smartlf.entity.pojo.User;
 import com.choco.smartlf.entity.vo.UserInfoVO;
 import com.choco.smartlf.entity.vo.UserLoginVO;
 import com.choco.smartlf.enums.CheckType;
+import org.springframework.web.multipart.MultipartFile;
 
 /**
 * @author renpe
@@ -29,4 +30,6 @@ public interface UserService extends IService<User> {
     void updatePassword(Long userId, UpdatePasswordDTO dto);
 
     boolean isSame(Long userId, String value);
+
+    String updateAvatar(Long userId, MultipartFile file);
 }

@@ -19,12 +19,16 @@ import com.choco.smartlf.mapper.UserMapper;
 import com.choco.smartlf.service.UserService;
 import com.choco.smartlf.utils.Constant;
 import com.choco.smartlf.utils.ErrorMsgConstant;
+import com.choco.smartlf.utils.ImageNameUtil;
 import com.choco.smartlf.utils.JwtUtil;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -36,6 +40,7 @@ import static jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED;
  * @description 针对表【user(用户核心表)】的数据库操作Service实现
  * @createDate 2026-04-06 14:52:42
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserServiceImpl extends ServiceImpl<UserMapper, User>
@@ -43,6 +48,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     // 自动读取环境变量或 yaml 里的密钥
     @Value("${system.admin-secret-key:QG-Studio-Super-Key}")
     private String adminSecretKey;
+
+    // 自动读取环境变量或 yaml 里的文件存储的前缀
+    @Value("${system.file-prefix:D:/drms/upload/}")
+    private String filePrefix;
 
     private final UserMapper userMapper;
     private final StringRedisTemplate redisTemplate;
@@ -187,6 +196,42 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         //校验所填旧密码是否与原密码相同
         User user = getById(userId);
         return BCrypt.checkpw(value, user.getPassword());
+    }
+
+    @Override
+    public String updateAvatar(Long userId, MultipartFile file) {
+        if (file.isEmpty()) throw new BusinessException(ErrorMsgConstant.INVALID_FILE);
+
+        // 生成文件名
+        String imageName = ImageNameUtil.getImageName(file.getOriginalFilename());
+
+        // 获得访问路径
+
+        String fullSavePath = filePrefix + "avatars/" + imageName;
+        // 确保父目录存在
+        java.io.File destFile = new java.io.File(fullSavePath);
+        if (!destFile.getParentFile().exists()) {
+            destFile.getParentFile().mkdirs();
+        }
+
+        // 存入本地
+        try {
+            file.transferTo(new java.io.File(fullSavePath));
+        } catch (IOException e) {
+            throw new BusinessException(ErrorMsgConstant.FILE_UPLOAD_ERROR);
+        }
+
+        // 存到数据库（仅网络访问URL）
+        String accessUrl =  "/images/avatars/" + imageName;;
+
+        User updateUser = new User();
+        updateUser.setId(userId);
+        updateUser.setAvatarUrl(accessUrl);
+        updateById(updateUser);
+
+        //生成网络访问 URL (存入数据库并返回)
+                // 这里要对应 WebConfig 里的
+       return accessUrl;
     }
 
     private LambdaQueryWrapper<User> getUserLambdaQueryWrapper(String username, String email, String phone) {

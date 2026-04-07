@@ -19,4 +19,6 @@ public class ErrorMsgConstant {
     public static final String INVALID_NICKNAME ="昵称格式不正确" ;
     public static final String PASSWORD_ERROR = "旧密码错误";
     public static final String PASSWORD_SAME_ERROR = "新密码不能与旧密码相同";
+    public static final String INVALID_FILE = "文件格式不正确";
+    public static final String FILE_UPLOAD_ERROR = "文件上传错误";
 }

@@ -2,6 +2,7 @@ package com.choco.smartlf.config;
 
 import com.choco.smartlf.interceptor.TokenInterceptor;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.cors.CorsConfiguration;
@@ -16,6 +17,11 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 public class WebConfig implements WebMvcConfigurer {
 
     private final TokenInterceptor tokenInterceptor;
+
+    // 自动读取环境变量或 yaml 里的文件存储的前缀
+    @Value("${system.file-prefix:D:/drms/upload/}")
+    private String filePrefix;
+
 
     @Bean
     public CorsFilter corsFilter() {
@@ -37,8 +43,8 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         // 当浏览器访问 http://localhost:8080/images/xxx.jpg 时
-        // SpringBoot 自动去 D:/drms/upload/ 目录下找 xxx.jpg
-        registry.addResourceHandler("/images/**")
-                .addResourceLocations("file:D:/drms/upload/"); //之后可以换成OSS存储
+        // SpringBoot 自动去目录找 xxx.jpg
+        registry.addResourceHandler("images/**")
+                .addResourceLocations("file:" + filePrefix);
     }
 }

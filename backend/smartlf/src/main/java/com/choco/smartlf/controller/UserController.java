@@ -18,6 +18,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import static jakarta.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
 
@@ -98,4 +99,13 @@ public class UserController {
         return Result.success();
     }
 
+    @Operation(summary = "上传/修改头像")
+    @PostMapping("/avatar")
+    public Result<String> updateAvatar(
+            @Schema(description = "头像文件", required = true) @RequestParam("file") MultipartFile file) {
+        Long userId = UserContext.getUserId();
+        // 返回新的头像访问URL
+        String avatarUrl = userService.updateAvatar(userId, file);
+        return Result.success(avatarUrl);
+    }
 }
