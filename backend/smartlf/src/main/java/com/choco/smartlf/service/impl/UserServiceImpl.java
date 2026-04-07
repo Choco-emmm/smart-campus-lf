@@ -1,5 +1,6 @@
 package com.choco.smartlf.service.impl;
 
+import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.digest.BCrypt;
@@ -8,6 +9,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.choco.smartlf.entity.dto.UserLoginDTO;
 import com.choco.smartlf.entity.dto.UserRegisterDTO;
 import com.choco.smartlf.entity.pojo.User;
+import com.choco.smartlf.entity.vo.UserInfoVO;
 import com.choco.smartlf.entity.vo.UserLoginVO;
 import com.choco.smartlf.enums.CheckType;
 import com.choco.smartlf.exception.BusinessException;
@@ -21,6 +23,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import static jakarta.servlet.http.HttpServletResponse.SC_FORBIDDEN;
 import static jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED;
@@ -40,6 +43,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 
     private final UserMapper userMapper;
     private final StringRedisTemplate redisTemplate;
+
     @Override
     public void registerUser(UserRegisterDTO dto) {
         //看身份，如果是管理员先验证密钥
@@ -49,7 +53,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             }
         }
         //验证用户名、邮箱、手机号是否重复
-        LambdaQueryWrapper<User> queryWrapper = getUserLambdaQueryWrapper(dto.getUsername(),dto.getEmail(),dto.getPhone());
+        LambdaQueryWrapper<User> queryWrapper = getUserLambdaQueryWrapper(dto.getUsername(), dto.getEmail(), dto.getPhone());
         List<User> users = userMapper.selectList(queryWrapper);
         if (!users.isEmpty()) {
             throw new BusinessException(SC_UNAUTHORIZED, "用户名、邮箱或手机号已存在！");
@@ -79,7 +83,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         LambdaQueryWrapper<User> queryWrapper = getUserLambdaQueryWrapper(account);
         User user = userMapper.selectOne(queryWrapper);
         //查不到用户或者密码对不上
-        if (user == null||!BCrypt.checkpw(dto.getPassword(), user.getPassword())) {
+        if (user == null || !BCrypt.checkpw(dto.getPassword(), user.getPassword())) {
             throw new BusinessException(SC_UNAUTHORIZED, "用户不存在或密码错误");
         }
         //验证是否被封禁
@@ -89,7 +93,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         //将用户ID，用户角色，用户名封装，生成token
         String token = JwtUtil.createJwtToken(user.getId(), user.getRole(), user.getUsername());
         //将token存入redis并设置过期时间
-        redisTemplate.opsForValue().set(Constant.TOKEN_PREFIX + user.getId(), token, Constant.TOKEN_EXPIRATION);
+        String key = Constant.TOKEN_PREFIX + user.getId();
+        redisTemplate.opsForValue().set(key, token);
+        //设置过期时间
+        redisTemplate.expire(key, Constant.TOKEN_EXPIRATION, TimeUnit.MINUTES);
 
         //返回登录信息
         return new UserLoginVO(token, user.getId(), user.getUsername(), user.getNickname(), user.getRole());
@@ -136,4 +143,15 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         return queryWrapper;
     }
 
+    @Override
+    public UserInfoVO getUserInfo(Long userId) {
+        //根据用户id去查询用户信息
+        User user = getById(userId);
+        if(user==null){
+            throw new BusinessException("用户不存在");
+        }
+        UserInfoVO vo = new UserInfoVO();
+        BeanUtil.copyProperties(user, vo);
+        return vo;
+    }
 }

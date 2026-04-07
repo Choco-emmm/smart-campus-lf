@@ -14,8 +14,8 @@ public class UserContext {
         CURRENT_LOCAL.remove();
     }
     //获取用户id
-    public static String getUserId() {
-        return (String) CURRENT_LOCAL.get().get("userId");
+    public static Long getUserId() {
+        return (Long) CURRENT_LOCAL.get().get("userId");
     }
     //获取用户身份
     public static Integer getUserRole() {

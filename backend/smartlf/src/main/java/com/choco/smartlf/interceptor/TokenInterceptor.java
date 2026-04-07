@@ -40,7 +40,7 @@ public class TokenInterceptor implements HandlerInterceptor {
             throw new BusinessException(401, "您还未登录，请先登录！");
         }
 
-        // 4. 解析令牌
+        // 4. 解析令牌+存入ThreadLocal
         try {
             Claims claims = JwtUtil.parseJwt(token);
             UserContext.setData(claims);
@@ -50,7 +50,7 @@ public class TokenInterceptor implements HandlerInterceptor {
         }
 
         // 5. 校验Redis中是否过期（单点登录/强制下线防线）
-        String key = Constant.TOKEN_PREFIX + token;
+        String key = Constant.TOKEN_PREFIX + UserContext.getUserId();
         if(StrUtil.isBlank(stringRedisTemplate.opsForValue().get(key))){
             throw new BusinessException(401, "登录已过期，请重新登录！");
         }
@@ -59,7 +59,7 @@ public class TokenInterceptor implements HandlerInterceptor {
         stringRedisTemplate.expire(key, Constant.TOKEN_EXPIRATION, TimeUnit.MINUTES);
         log.info("Token续期成功，用户ID: {}", UserContext.getUserId());
 
-        // 7. 角色权限拦截 (RBAC)
+        // 7. 角色权限拦截
         String path = request.getRequestURI();
         Integer role = UserContext.getUserRole();
 

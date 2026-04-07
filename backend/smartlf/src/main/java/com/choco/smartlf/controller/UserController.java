@@ -1,19 +1,24 @@
 package com.choco.smartlf.controller;
 
 import cn.hutool.core.util.StrUtil;
+import com.choco.smartlf.entity.dto.UpdatePasswordDTO;
 import com.choco.smartlf.entity.dto.UserLoginDTO;
 import com.choco.smartlf.entity.dto.UserRegisterDTO;
 import com.choco.smartlf.entity.Result;
+import com.choco.smartlf.entity.dto.UserUpdateDTO;
+import com.choco.smartlf.entity.vo.UserInfoVO;
 import com.choco.smartlf.entity.vo.UserLoginVO;
 import com.choco.smartlf.enums.CheckType;
 import com.choco.smartlf.exception.BusinessException;
 import com.choco.smartlf.service.UserService;
+import com.choco.smartlf.utils.UserContext;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import static jakarta.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
 
@@ -53,5 +58,15 @@ public class UserController {
         UserLoginVO vo = userService.login(dto);
         return Result.success(vo);
     }
+
+    @Operation(summary = "查看个人信息")
+    @GetMapping("/info")
+    public Result<UserInfoVO> getUserInfo() {
+        // 从 ThreadLocal 中获取当前登录用户的 ID
+        Long userId = Long.valueOf(UserContext.getUserId());
+        UserInfoVO vo = userService.getUserInfo(userId);
+        return Result.success(vo);
+    }
+
 
 }

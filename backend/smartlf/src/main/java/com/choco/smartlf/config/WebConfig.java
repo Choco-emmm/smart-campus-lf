@@ -28,12 +28,12 @@ public class WebConfig implements WebMvcConfigurer {
         source.registerCorsConfiguration("/**", config);
         return new CorsFilter(source);
     }
-//    @Override
-//    public void addInterceptors(InterceptorRegistry registry) {
-//        registry.addInterceptor(tokenInterceptor)
-//                .addPathPatterns("/**")
-//                .excludePathPatterns("/user/login", "/user/register", "/images/**");
-//    }
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(tokenInterceptor)
+                .addPathPatterns("/**")
+                .excludePathPatterns("/user/login", "/user/register", "/images/**");
+    }
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         // 当浏览器访问 http://localhost:8080/images/xxx.jpg 时

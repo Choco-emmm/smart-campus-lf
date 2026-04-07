@@ -3,6 +3,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.choco.smartlf.entity.dto.UserLoginDTO;
 import com.choco.smartlf.entity.dto.UserRegisterDTO;
 import com.choco.smartlf.entity.pojo.User;
+import com.choco.smartlf.entity.vo.UserInfoVO;
 import com.choco.smartlf.entity.vo.UserLoginVO;
 import com.choco.smartlf.enums.CheckType;
 
@@ -18,4 +19,6 @@ public interface UserService extends IService<User> {
     UserLoginVO login(UserLoginDTO dto);
 
     boolean checkUnique(CheckType type, String value);
+
+    UserInfoVO getUserInfo(Long userId);
 }
