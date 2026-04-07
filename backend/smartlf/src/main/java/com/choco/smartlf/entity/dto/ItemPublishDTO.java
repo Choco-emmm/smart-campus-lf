@@ -1,7 +1,11 @@
 package com.choco.smartlf.entity.dto;
 
+import com.choco.smartlf.utils.Constant;
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.networknt.schema.format.RegexFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -13,7 +17,9 @@ import java.util.List;
 public class ItemPublishDTO {
 
     @NotNull(message = "类型不能为空")
-    @Schema(description = "0:丢失，1:拾取", required = true, example = "0")
+    @Min(value = 0, message = "类型格式不正确")
+    @Max(value = 1, message = "类型格式不正确")
+    @Schema(description = "0:丢失，1:拾取", required = true,example = "0")
     private Integer type;
 
     @NotBlank(message = "物品名称不能为空")
@@ -42,7 +48,7 @@ public class ItemPublishDTO {
     @Schema(description = "核验暗号（选填，贵重物品建议填写）")
     private String verifyAnswer;
 
-    
+
     @Schema(description = "联系方式（选填，若填写暗号则此项必填）")
     private String privateContact;
 }
