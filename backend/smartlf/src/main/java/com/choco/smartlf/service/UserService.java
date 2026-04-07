@@ -1,5 +1,6 @@
 package com.choco.smartlf.service;
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.choco.smartlf.entity.dto.UpdatePasswordDTO;
 import com.choco.smartlf.entity.dto.UserLoginDTO;
 import com.choco.smartlf.entity.dto.UserRegisterDTO;
 import com.choco.smartlf.entity.dto.UserUpdateDTO;
@@ -24,4 +25,6 @@ public interface UserService extends IService<User> {
     UserInfoVO getUserInfo(Long userId);
 
     void updateUserInfo(Long userId, UserUpdateDTO dto);
+
+    void updatePassword(Long userId, UpdatePasswordDTO dto);
 }

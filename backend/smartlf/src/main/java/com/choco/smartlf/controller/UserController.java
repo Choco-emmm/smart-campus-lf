@@ -1,6 +1,7 @@
 package com.choco.smartlf.controller;
 
 import cn.hutool.core.util.StrUtil;
+import com.choco.smartlf.entity.dto.UpdatePasswordDTO;
 import com.choco.smartlf.entity.dto.UserLoginDTO;
 import com.choco.smartlf.entity.dto.UserRegisterDTO;
 import com.choco.smartlf.entity.Result;
@@ -71,6 +72,14 @@ public class UserController {
     public Result<Void> updateUserInfo(@Validated @RequestBody UserUpdateDTO dto) {
         Long userId = UserContext.getUserId();
         userService.updateUserInfo(userId, dto);
+        return Result.success();
+    }
+
+    @Operation(summary = "修改密码")
+    @PutMapping("/password")
+    public Result<Void> updatePassword(@Validated @RequestBody UpdatePasswordDTO dto) {
+        Long userId = UserContext.getUserId();
+        userService.updatePassword(userId, dto);
         return Result.success();
     }
 

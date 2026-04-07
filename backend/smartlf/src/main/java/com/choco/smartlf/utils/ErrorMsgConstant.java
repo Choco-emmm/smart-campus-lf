@@ -17,4 +17,6 @@ public class ErrorMsgConstant {
     public static final String PHONE_EXIST = "手机号已存在";
     public static final String EMAIL_EXIST = "邮箱已存在";
     public static final String INVALID_NICKNAME ="昵称格式不正确" ;
+    public static final String PASSWORD_ERROR = "旧密码错误";
+    public static final String PASSWORD_SAME_ERROR = "新密码不能与旧密码相同";
 }

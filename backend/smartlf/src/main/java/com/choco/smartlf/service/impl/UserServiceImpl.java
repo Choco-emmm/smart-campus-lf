@@ -6,6 +6,7 @@ import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.digest.BCrypt;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.choco.smartlf.entity.dto.UpdatePasswordDTO;
 import com.choco.smartlf.entity.dto.UserLoginDTO;
 import com.choco.smartlf.entity.dto.UserRegisterDTO;
 import com.choco.smartlf.entity.dto.UserUpdateDTO;
@@ -193,6 +194,28 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         user.setId(userId);
         //根据id更新数据
         updateById(user);
+    }
+
+    @Override
+    public void updatePassword(Long userId, UpdatePasswordDTO dto) {
+        //通过userId查询用户
+        User user = getById(userId);
+        if (user == null) {
+            throw new BusinessException(ErrorMsgConstant.USER_NOT_FOUND);
+        }
+        //校验旧密码是否正确
+        if (!BCrypt.checkpw(dto.getOldPassword(), user.getPassword())) {
+            throw new BusinessException(ErrorMsgConstant.PASSWORD_ERROR);
+        }
+        //校验新密码不能和旧密码一样
+        if (BCrypt.checkpw(dto.getNewPassword(), user.getPassword())) {
+            throw new BusinessException(ErrorMsgConstant.PASSWORD_SAME_ERROR);
+        }
+        //加密新密码并保存
+        User updateUser = new User();
+        updateUser.setId(userId);
+        updateUser.setPassword(BCrypt.hashpw(dto.getNewPassword()));
+        this.updateById(updateUser);
     }
 
 
