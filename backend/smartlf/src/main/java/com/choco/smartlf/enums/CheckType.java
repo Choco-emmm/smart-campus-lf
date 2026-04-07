@@ -4,5 +4,5 @@ public enum CheckType {
     USERNAME,
     PHONE,
     EMAIL,
-    NICKNAME;
+    PASSWORD;
 }

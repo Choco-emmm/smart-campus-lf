@@ -31,7 +31,7 @@ public class UserController {
 
     @Operation(summary = "通用唯一性校验 ，供输入失焦后校验")
     @GetMapping("/isExist")
-    public Result<Boolean> checkUnique(
+    public Result<Boolean> isExist(
             @Schema(description = "校验类型: USERNAME/PHONE/EMAIL", required = true) @RequestParam CheckType type,
             @Schema(description = "要校验的值", required = true) @RequestParam String value) {
         // 1. 参数非空校验
@@ -39,9 +39,24 @@ public class UserController {
             throw new BusinessException(SC_BAD_REQUEST, "校验参数不能为空");
         }
         // 2. 调用 Service 层进行查询看是否已有value这个字段
-        boolean isRegistered = userService.isExist(type, value);
-        // 3. 返回结果: true 代表已被注册，false 代表未被注册(可用)
-        return Result.success(isRegistered);
+        boolean isExist = userService.isExist(type, value);
+        // 3. 返回结果: true 代表已存在，false 代表不存在
+        return Result.success(isExist);
+    }
+
+    @Operation(summary = "所填旧密码是否与原密码相同校验，供输入失焦后校验")
+    @GetMapping("/isSame")
+    public Result<Boolean> isSame(
+            @Schema(description = "要校验的值", required = true) @RequestParam String value) {
+        // 1. 参数非空校验
+        if (StrUtil.isBlank(value)) {
+            throw new BusinessException(SC_BAD_REQUEST, "校验参数不能为空");
+        }
+        // 2. 调用 Service 层进行查询看是否已有value这个字段
+        Long userId = UserContext.getUserId();
+        boolean isSame = userService.isSame(userId,value);
+        // 3. 返回结果: true 代表已存在，false 代表不存在
+        return Result.success(isSame);
     }
 
     @Operation(summary = "用户注册", description = "管理员注册需提供密钥")

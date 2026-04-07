@@ -115,46 +115,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             case EMAIL:
                 wrapper.eq(User::getEmail, value);
                 break;
-            case NICKNAME:
-                wrapper.eq(User::getNickname, value);
             // 因为 type 是枚举，所以能传过来一定是对的type，不用再判断剩下的了
         }
         return exists(wrapper);
 
-    }
-
-    private LambdaQueryWrapper<User> getUserLambdaQueryWrapper(String username, String email, String phone) {
-        LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(User::getUsername, username)
-                .or()
-                .eq(User::getEmail, email)
-                .or()
-                .eq(User::getPhone, phone);
-        return queryWrapper;
-    }
-
-    private LambdaQueryWrapper<User> getUserLambdaQueryWrapper(String account) {
-        LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(User::getUsername, account)
-                .or()
-                .eq(User::getEmail, account)
-                .or()
-                .eq(User::getPhone, account);
-        return queryWrapper;
-    }
-
-    private String createNickname(){
-        int flag = 1;//默认重复
-        String nickname=null;
-        while (flag == 1) {
-            //只要重复就要一直循环生成
-            nickname=Constant.NICKNAME_PREFIX + RandomUtil.randomNumbers(6);
-            if(!isExist(CheckType.NICKNAME, nickname)){
-                //不重复了就置为零，直接出循环
-                flag = 0;
-            }
-        }
-        return nickname;
     }
 
     @Override
@@ -216,6 +180,37 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         updateUser.setId(userId);
         updateUser.setPassword(BCrypt.hashpw(dto.getNewPassword()));
         this.updateById(updateUser);
+    }
+
+    @Override
+    public boolean isSame(Long userId, String value) {
+        //校验所填旧密码是否与原密码相同
+        User user = getById(userId);
+        return BCrypt.checkpw(value, user.getPassword());
+    }
+
+    private LambdaQueryWrapper<User> getUserLambdaQueryWrapper(String username, String email, String phone) {
+        LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(User::getUsername, username)
+                .or()
+                .eq(User::getEmail, email)
+                .or()
+                .eq(User::getPhone, phone);
+        return queryWrapper;
+    }
+
+    private LambdaQueryWrapper<User> getUserLambdaQueryWrapper(String account) {
+        LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(User::getUsername, account)
+                .or()
+                .eq(User::getEmail, account)
+                .or()
+                .eq(User::getPhone, account);
+        return queryWrapper;
+    }
+
+    private String createNickname(){
+        return Constant.NICKNAME_PREFIX + RandomUtil.randomNumbers(6);
     }
 
 

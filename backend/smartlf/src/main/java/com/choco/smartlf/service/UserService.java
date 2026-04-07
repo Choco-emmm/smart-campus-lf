@@ -27,4 +27,6 @@ public interface UserService extends IService<User> {
     void updateUserInfo(Long userId, UserUpdateDTO dto);
 
     void updatePassword(Long userId, UpdatePasswordDTO dto);
+
+    boolean isSame(Long userId, String value);
 }

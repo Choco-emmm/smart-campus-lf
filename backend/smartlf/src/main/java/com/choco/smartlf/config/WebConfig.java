@@ -32,7 +32,7 @@ public class WebConfig implements WebMvcConfigurer {
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(tokenInterceptor)
                 .addPathPatterns("/**")
-                .excludePathPatterns("/user/login", "/user/register", "/images/**");
+                .excludePathPatterns("/user/login", "/user/register", "/user/is*","/images/**");
     }
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
