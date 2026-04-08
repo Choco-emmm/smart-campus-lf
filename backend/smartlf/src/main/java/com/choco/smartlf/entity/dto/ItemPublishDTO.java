@@ -9,6 +9,8 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 
@@ -29,7 +31,7 @@ public class ItemPublishDTO {
     @NotNull(message = "发生时间不能为空")
     @Schema(description = "丢失/拾取发生时间", required = true)
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
-    private Date eventTime;
+    private LocalDateTime eventTime;
 
     @NotBlank(message = "地点不能为空")
     @Schema(description = "发生地点", required = true, example = "二教 A304")

@@ -1,6 +1,7 @@
 package com.choco.smartlf.entity.pojo;
 
 
+import java.time.LocalDateTime;
 import java.util.Date;
 
 import com.baomidou.mybatisplus.annotation.IdType;
@@ -22,5 +23,5 @@ public class ReportRecord {
     @Schema(description="0:待处理, 1:核实, 2:驳回")
     private Integer status;
     @Schema(description="")
-    private Date createTime;
+    private LocalDateTime createTime;
 }

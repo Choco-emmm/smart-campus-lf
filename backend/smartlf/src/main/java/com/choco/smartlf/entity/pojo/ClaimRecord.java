@@ -1,6 +1,7 @@
 package com.choco.smartlf.entity.pojo;
 
 
+import java.time.LocalDateTime;
 import java.util.Date;
 
 import com.baomidou.mybatisplus.annotation.IdType;
@@ -22,7 +23,7 @@ public class ClaimRecord {
     @Schema(description="0:待帖主审, 1:待管理员审, 2:通过, 3:拒绝")
     private Integer status;
     @Schema(description="申请时间")
-    private Date createTime;
+    private LocalDateTime createTime;
     @Schema(description="最后修改时间")
-    private Date updateTime;
+    private LocalDateTime updateTime;
 }

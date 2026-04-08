@@ -2,6 +2,8 @@ package com.choco.smartlf.entity.vo;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
+
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 
@@ -12,7 +14,7 @@ public class ItemDetailVO {
     private Long userId; // 发布人ID
     private Integer type;
     private String itemName;
-    private Date eventTime;
+    private LocalDateTime eventTime;
     private String location;
     private String publicDesc;
     private Integer status;
@@ -35,5 +37,5 @@ public class ItemDetailVO {
     @Schema(description = "是否开启了私密核验模式 (true:需要暗号认领, false:普通公开拿取)")
     private Boolean hasSecureCheck;
 
-    private Date createTime;
+    private LocalDateTime createTime;
 }

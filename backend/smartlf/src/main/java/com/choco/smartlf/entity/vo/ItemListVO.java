@@ -2,6 +2,8 @@ package com.choco.smartlf.entity.vo;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
+
+import java.time.LocalDateTime;
 import java.util.Date;
 
 @Data
@@ -10,7 +12,7 @@ public class ItemListVO {
     private Long id;
     private Integer type;
     private String itemName;
-    private Date eventTime;
+    private LocalDateTime eventTime;
     private String location;
     private String publicDesc;
     private Integer status;
@@ -19,5 +21,5 @@ public class ItemListVO {
     @Schema(description = "封面图（取详情表里的第一张图）")
     private String coverImage;
     
-    private Date createTime;
+    private LocalDateTime createTime;
 }

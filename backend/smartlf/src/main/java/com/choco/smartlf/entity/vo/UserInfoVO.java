@@ -2,6 +2,8 @@ package com.choco.smartlf.entity.vo;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
+
+import java.time.LocalDateTime;
 import java.util.Date;
 
 @Data
@@ -22,5 +24,5 @@ public class UserInfoVO {
     @Schema(description = "角色 (0-学生, 1-管理员)")
     private Integer role;
     @Schema(description = "注册时间")
-    private Date createTime;
+    private LocalDateTime createTime;
 }

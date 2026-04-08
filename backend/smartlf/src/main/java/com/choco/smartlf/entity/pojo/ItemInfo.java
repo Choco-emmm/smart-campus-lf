@@ -1,6 +1,7 @@
 package com.choco.smartlf.entity.pojo;
 
 
+import java.time.LocalDateTime;
 import java.util.Date;
 
 import com.baomidou.mybatisplus.annotation.IdType;
@@ -20,7 +21,7 @@ public class ItemInfo {
     @Schema(description="物品标题")
     private String itemName;
     @Schema(description="丢失/拾取发生时间")
-    private Date eventTime;
+    private LocalDateTime eventTime;
     @Schema(description="发生地点")
     private String location;
     @Schema(description="公开可见的简述")
@@ -30,11 +31,11 @@ public class ItemInfo {
     @Schema(description="是否置顶（0:否，1:是）", implementation = com.choco.smartlf.enums.TopEnum.class)
     private Integer isTop;
     @Schema(description="置顶结束时间")
-    private Date topEndTime;
+    private LocalDateTime topEndTime;
     @Schema(description="1:高价值/敏感（强制二审）", implementation = com.choco.smartlf.enums.SensitiveEnum.class)
     private Integer isSensitive;
     @Schema(description="被举报次数")
     private Integer reportCount;
     @Schema(description="创建时间")
-    private Date createTime;
+    private LocalDateTime createTime;
 }

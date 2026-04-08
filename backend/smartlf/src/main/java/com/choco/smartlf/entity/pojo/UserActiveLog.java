@@ -1,7 +1,7 @@
 package com.choco.smartlf.entity.pojo;
 
 
-import java.util.Date;
+import java.time.LocalDateTime;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -16,5 +16,5 @@ public class UserActiveLog {
     @Schema(description="活跃用户ID")
     private Long userId;
     @Schema(description="具体活跃时间点（B+树索引）")
-    private Date activeTime;
+    private LocalDateTime activeTime;
 }

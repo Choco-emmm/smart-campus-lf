@@ -5,6 +5,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 
@@ -23,7 +25,7 @@ public class ItemUpdateDTO {
     @NotNull(message = "发生时间不能为空")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     @Schema(description = "丢失/拾取发生时间")
-    private Date eventTime;
+    private LocalDateTime eventTime;
 
     @NotBlank(message = "地点不能为空")
     @Schema(description = "发生地点")
