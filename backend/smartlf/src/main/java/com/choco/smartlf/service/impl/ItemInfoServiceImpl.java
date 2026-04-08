@@ -6,17 +6,17 @@ import cn.hutool.core.collection.ListUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 
-import com.choco.smartlf.entity.dto.ItemPublishDTO;
-import com.choco.smartlf.entity.dto.ItemStatusUpdateDTO;
-import com.choco.smartlf.entity.dto.ItemTopApplyDTO;
-import com.choco.smartlf.entity.dto.ItemUpdateDTO;
+import com.choco.smartlf.entity.dto.*;
 import com.choco.smartlf.entity.pojo.ItemDetail;
 import com.choco.smartlf.entity.pojo.ItemInfo;
 import com.choco.smartlf.entity.pojo.ItemSecure;
 import com.choco.smartlf.entity.pojo.User;
 import com.choco.smartlf.entity.vo.ItemDetailVO;
+import com.choco.smartlf.entity.vo.ItemListVO;
 import com.choco.smartlf.enums.ItemStatusEnum;
 import com.choco.smartlf.enums.ResultCodeEnum;
 import com.choco.smartlf.enums.TopEnum;
@@ -282,6 +282,49 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
         // 3. 执行状态更新
         item.setStatus(dto.getStatus());
         this.updateById(item);
+    }
+
+    @Override
+    public IPage<ItemListVO> pageQuery(ItemPageQueryDTO dto) {
+        // 1. 构造分页对象
+        Page<ItemInfo> page = new Page<>(dto.getPage(), dto.getPageSize());
+
+        // 2. 构造查询条件
+        LambdaQueryWrapper<ItemInfo> wrapper = new LambdaQueryWrapper<>();
+
+        // 防线：绝对不能把违规下架的帖子展示出来
+        wrapper.ne(ItemInfo::getStatus, ItemStatusEnum.BANNED.getCode());
+
+        // 动态条件过滤
+        wrapper.eq(dto.getType() != null, ItemInfo::getType, dto.getType());
+        if (StrUtil.isNotBlank(dto.getKeyword())) {
+            wrapper.and(w -> w.like(ItemInfo::getItemName, dto.getKeyword())
+                    .or()
+                    .like(ItemInfo::getPublicDesc, dto.getKeyword()));
+        }
+
+        // 排序核心：is_top 倒序 (1 排前面)，然后按创建时间倒序
+        wrapper.orderByDesc(ItemInfo::getIsTop).orderByDesc(ItemInfo::getCreateTime);
+
+        // 3. 执行查询
+        this.page(page, wrapper);
+
+        // 4. 数据转换：ItemInfo -> ItemListVO
+        return page.convert(itemInfo -> {
+            ItemListVO vo = new ItemListVO();
+            //能转的先转了
+            BeanUtil.copyProperties(itemInfo, vo);
+
+            // 去详情表拿第一张图片当封面
+            ItemDetail detail = itemDetailService.getById(itemInfo.getId());
+            if (detail != null && StrUtil.isNotBlank(detail.getImagesUrl())) {
+                List<String> images = JSONUtil.toList(detail.getImagesUrl(), String.class);
+                if (CollUtil.isNotEmpty(images)) {
+                    vo.setCoverImage(images.getFirst());
+                }
+            }
+            return vo;
+        });
     }
 }
 

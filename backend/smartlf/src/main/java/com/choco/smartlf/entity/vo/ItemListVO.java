@@ -11,9 +11,11 @@ import java.util.Date;
 public class ItemListVO {
     private Long id;
     private Integer type;
+    @Schema(description = "物品标签/核心名 (前端可作为一个小小的 Tag 展示)", example = "雨伞")
     private String itemName;
     private LocalDateTime eventTime;
     private String location;
+    @Schema(description = "帖子大标题 (前端用加粗大字体展示在封面图下方)", example = "在二饭捡到一把黑色雨伞")
     private String publicDesc;
     private Integer status;
     private Integer isTop;

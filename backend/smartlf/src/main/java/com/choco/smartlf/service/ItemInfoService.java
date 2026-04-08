@@ -1,12 +1,11 @@
 package com.choco.smartlf.service;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.choco.smartlf.entity.dto.ItemPublishDTO;
-import com.choco.smartlf.entity.dto.ItemStatusUpdateDTO;
-import com.choco.smartlf.entity.dto.ItemTopApplyDTO;
-import com.choco.smartlf.entity.dto.ItemUpdateDTO;
+import com.choco.smartlf.entity.dto.*;
 import com.choco.smartlf.entity.pojo.ItemInfo;
 import com.choco.smartlf.entity.vo.ItemDetailVO;
+import com.choco.smartlf.entity.vo.ItemListVO;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
@@ -27,4 +26,6 @@ public interface ItemInfoService extends IService<ItemInfo> {
     void deleteItem(Long id);
 
     void updateStatus(ItemStatusUpdateDTO dto);
+
+    IPage<ItemListVO> pageQuery(ItemPageQueryDTO dto);
 }

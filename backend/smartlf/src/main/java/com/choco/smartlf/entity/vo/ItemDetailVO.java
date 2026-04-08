@@ -13,9 +13,11 @@ public class ItemDetailVO {
     private Long id;
     private Long userId; // 发布人ID
     private Integer type;
+    @Schema(description = "物品标签/分类名")
     private String itemName;
     private LocalDateTime eventTime;
     private String location;
+    @Schema(description = "帖子大标题")
     private String publicDesc;
     private Integer status;
 

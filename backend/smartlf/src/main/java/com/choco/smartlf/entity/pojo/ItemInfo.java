@@ -18,13 +18,13 @@ public class ItemInfo {
     private Long userId;
     @Schema(description="0:丢失，1:拾取", implementation = com.choco.smartlf.enums.ItemTypeEnum.class)
     private Integer type;
-    @Schema(description="物品标题")
+    @Schema(description="物品核心名称(用于分类/搜索，如：雨伞、校园卡)")
     private String itemName;
     @Schema(description="丢失/拾取发生时间")
     private LocalDateTime eventTime;
     @Schema(description="发生地点")
     private String location;
-    @Schema(description="公开可见的简述")
+    @Schema(description="帖子标题/公开简述(如：在二饭捡到一把黑色雨伞)")
     private String publicDesc;
     @Schema(description="0:寻找中，1:锁定中，2:已结案，3:被逻辑删除", implementation = com.choco.smartlf.enums.ItemStatusEnum.class)
     private Integer status;

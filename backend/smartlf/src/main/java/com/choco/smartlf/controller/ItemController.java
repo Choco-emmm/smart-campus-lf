@@ -1,5 +1,6 @@
 package com.choco.smartlf.controller;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.choco.smartlf.entity.Result;
 import com.choco.smartlf.entity.dto.*;
 import com.choco.smartlf.entity.vo.ItemDetailVO;
@@ -66,6 +67,13 @@ public class ItemController {
     public Result<Void> updateStatus(@Validated @RequestBody ItemStatusUpdateDTO dto) {
         itemInfoService.updateStatus(dto);
         return Result.success();
+    }
+
+    @Operation(summary = "分页查询物品列表广场")
+    @GetMapping("/page")
+    public Result<IPage<ItemListVO>> getPage(ItemPageQueryDTO dto) {
+        IPage<ItemListVO> pageResult = itemInfoService.pageQuery(dto);
+        return Result.success(pageResult);
     }
 //@Operation(summary = "举报物品信息")
 //@PostMapping("/report")

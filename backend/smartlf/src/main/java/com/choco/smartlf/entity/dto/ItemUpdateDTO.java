@@ -18,8 +18,8 @@ public class ItemUpdateDTO {
     @Schema(description = "要修改的物品主键ID", required = true)
     private Long id;
 
-    @NotBlank(message = "物品名称不能为空")
-    @Schema(description = "物品标题", example = "黑色 Apple Pencil 2代")
+    @NotBlank(message = "物品核心名称不能为空")
+    @Schema(description = "物品核心名称（如：雨伞、钥匙）", example = "雨伞")
     private String itemName;
 
     @NotNull(message = "发生时间不能为空")
@@ -31,7 +31,8 @@ public class ItemUpdateDTO {
     @Schema(description = "发生地点")
     private String location;
 
-    @NotBlank(message = "公开简述不能为空")
+    @NotBlank(message = "帖子标题/简述不能为空")
+    @Schema(description = "帖子标题，展示在列表最醒目位置（如：在二饭捡到一把黑色雨伞）", example = "在二饭捡到一把黑色雨伞")
     private String publicDesc;
 
     @Schema(description = "半公开细节")
