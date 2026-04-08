@@ -25,7 +25,7 @@ public class ItemInfo {
     private String location;
     @Schema(description="公开可见的简述")
     private String publicDesc;
-    @Schema(description="0:寻找中，1:锁定中，2:已结案", implementation = com.choco.smartlf.enums.ItemStatusEnum.class)
+    @Schema(description="0:寻找中，1:锁定中，2:已结案，3:被逻辑删除", implementation = com.choco.smartlf.enums.ItemStatusEnum.class)
     private Integer status;
     @Schema(description="是否置顶（0:否，1:是）", implementation = com.choco.smartlf.enums.TopEnum.class)
     private Integer isTop;

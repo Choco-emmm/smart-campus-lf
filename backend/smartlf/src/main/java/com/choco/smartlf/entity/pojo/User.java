@@ -5,6 +5,7 @@ import java.util.Date;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -35,6 +36,7 @@ public class User {
     private Date createTime;
     @Schema(description="最后修改时间")
     private Date updateTime;
+    @TableLogic
     @Schema(description="逻辑删除（0:未删, 1:已删）", implementation = com.choco.smartlf.enums.DeletedEnum.class)
     private Integer isDeleted;
 }

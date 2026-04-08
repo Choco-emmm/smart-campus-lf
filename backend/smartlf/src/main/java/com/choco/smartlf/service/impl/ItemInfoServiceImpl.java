@@ -162,8 +162,13 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
 
         //获取发布者信息
         User publisher = userService.getById(itemInfo.getUserId());
-        vo.setPublisherNickname(publisher.getNickname());
-        vo.setPublisherAvatarUrl(publisher.getAvatarUrl());
+        if(publisher != null){
+            vo.setPublisherNickname(publisher.getNickname());
+            vo.setPublisherAvatarUrl(publisher.getAvatarUrl());
+        }else {
+            vo.setPublisherNickname("用户已注销");
+            //默认头像在前端再设置，给所有url为null的都设置
+        }
 
         log.info("物品详情查询成功，物品ID: {}", id);
         return vo;
