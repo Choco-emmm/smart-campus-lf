@@ -7,7 +7,7 @@ import lombok.Getter;
 @Getter
 @AllArgsConstructor
 public enum RoleEnum {
-    STUDENT(0, "学生"),
+    USER(0, "普通用户"),
     ADMIN(1, "管理员");
 
     private final Integer code;

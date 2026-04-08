@@ -8,7 +8,8 @@ import lombok.Getter;
 public enum ItemStatusEnum {
     SEARCHING(0, "寻找中"),
     LOCKED(1, "锁定中"),
-    CLOSED(2, "已结案");
+    CLOSED(2, "已结案"),
+    BANNED(3, "违规下架");
 
     private final Integer code;
     private final String description;

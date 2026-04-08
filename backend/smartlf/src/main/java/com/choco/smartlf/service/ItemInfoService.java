@@ -21,4 +21,6 @@ public interface ItemInfoService extends IService<ItemInfo> {
     ItemDetailVO getItemDetail(Long id);
 
     void updateItem(ItemUpdateDTO dto);
+
+    void deleteItem(Long id);
 }

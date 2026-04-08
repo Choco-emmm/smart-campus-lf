@@ -42,13 +42,19 @@ public class ItemController {
         return Result.success(vo);
     }
 
-    @Operation(summary = "修改物品信息")
+    @Operation(summary = "修改物品信息(仅限发帖人)")
     @PutMapping("/update")
     public Result<Void> updateItem(@Validated @RequestBody ItemUpdateDTO dto) {
         itemInfoService.updateItem(dto);
         return Result.success();
     }
-
+    @Operation(summary = "删除物品信息 (仅限发帖人)")
+    @DeleteMapping("/{id}")
+    public Result<Void> deleteItem(
+            @Schema(description = "要删除的物品ID", required = true) @PathVariable Long id) {
+        itemInfoService.deleteItem(id);
+        return Result.success();
+    }
 //@Operation(summary = "举报物品信息")
 //@PostMapping("/report")
 //public Result<Void> reportItem(@Validated @RequestBody ItemReportDTO dto) {

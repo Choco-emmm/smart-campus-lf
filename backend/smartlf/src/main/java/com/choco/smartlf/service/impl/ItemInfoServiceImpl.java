@@ -162,10 +162,10 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
 
         //获取发布者信息
         User publisher = userService.getById(itemInfo.getUserId());
-        if(publisher != null){
+        if (publisher != null) {
             vo.setPublisherNickname(publisher.getNickname());
             vo.setPublisherAvatarUrl(publisher.getAvatarUrl());
-        }else {
+        } else {
             vo.setPublisherNickname("用户已注销");
             //默认头像在前端再设置，给所有url为null的都设置
         }
@@ -186,6 +186,7 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
             throw new BusinessException("该物品信息不存在");
         }
         if (!oldItem.getUserId().equals(currentUserId)) {
+            //只有本人能修改信息，管理员都不行
             throw new BusinessException(ResultCodeEnum.FORBIDDEN, "你没有权限修改他人的帖子！");
         }
 
@@ -224,6 +225,28 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
         }
 
         log.info("物品信息更新成功，物品ID: {}, 操作人ID: {}", itemId, currentUserId);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    @Override
+    public void deleteItem(Long id) {
+        //安全核验
+        Long userId = UserContext.getUserId();
+        ItemInfo item = getById(id);
+        if(item==null){
+            throw new BusinessException("该物品信息不存在");
+        }
+        if (!item.getUserId().equals(userId)) {
+            throw new BusinessException(ResultCodeEnum.FORBIDDEN, "你没有权限删除他人的帖子！");
+        }
+        //删除核验表信息
+        itemSecureService.removeById(id);
+        //删除详情表信息
+        itemDetailService.removeById(id);
+        //删除主表信息
+        removeById(id);
+
+        log.info("物品物理删除成功，彻底清空三表数据，物品ID: {}, 操作人ID: {}", id, userId);
     }
 }
 
