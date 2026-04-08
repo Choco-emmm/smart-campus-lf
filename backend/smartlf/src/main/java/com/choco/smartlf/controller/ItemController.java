@@ -8,6 +8,7 @@ import com.choco.smartlf.entity.dto.ItemUpdateDTO;
 import com.choco.smartlf.entity.vo.ItemDetailVO;
 import com.choco.smartlf.entity.vo.ItemListVO;
 import com.choco.smartlf.service.ItemInfoService;
+import com.choco.smartlf.service.TopApplyRecordService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -25,6 +26,7 @@ import java.util.List;
 public class ItemController {
 
     private final ItemInfoService itemInfoService; // 这里用统一个门面 Service 管理三张表
+    private final TopApplyRecordService topApplyRecordService;
 
     @Operation(summary = "发布失物/招领")
     @PostMapping("/publish")
@@ -55,6 +57,12 @@ public class ItemController {
         itemInfoService.deleteItem(id);
         return Result.success();
     }
+    @Operation(summary = "申请置顶 (需管理员审核)")
+    @PostMapping("/top/apply")
+    public Result<Void> applyTop(@Validated @RequestBody ItemTopApplyDTO dto) {
+        topApplyRecordService.applyTop(dto);
+        return Result.success();
+    }
 //@Operation(summary = "举报物品信息")
 //@PostMapping("/report")
 //public Result<Void> reportItem(@Validated @RequestBody ItemReportDTO dto) {
@@ -63,12 +71,6 @@ public class ItemController {
 //    return Result.success();
 //}
 //
-//    @Operation(summary = "申请置顶 (需管理员审核)")
-//    @PostMapping("/top/apply")
-//    public Result<Void> applyTop(@Validated @RequestBody ItemTopApplyDTO dto) {
-//        itemInfoService.applyTop(dto);
-//        return Result.success();
-//    }
 //
 @Operation(summary = "上传失物/招领图片", description = "发布/修改帖子前，先调用此接口上传图片换取URL")
 @PostMapping("/image")

@@ -2,6 +2,7 @@ package com.choco.smartlf.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.choco.smartlf.entity.dto.ItemPublishDTO;
+import com.choco.smartlf.entity.dto.ItemTopApplyDTO;
 import com.choco.smartlf.entity.dto.ItemUpdateDTO;
 import com.choco.smartlf.entity.pojo.ItemInfo;
 import com.choco.smartlf.entity.vo.ItemDetailVO;
