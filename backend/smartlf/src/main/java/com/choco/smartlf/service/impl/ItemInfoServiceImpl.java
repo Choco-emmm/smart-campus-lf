@@ -9,6 +9,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 
 import com.choco.smartlf.entity.dto.ItemPublishDTO;
+import com.choco.smartlf.entity.dto.ItemUpdateDTO;
 import com.choco.smartlf.entity.pojo.ItemDetail;
 import com.choco.smartlf.entity.pojo.ItemInfo;
 import com.choco.smartlf.entity.pojo.ItemSecure;
@@ -166,6 +167,58 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
 
         log.info("物品详情查询成功，物品ID: {}", id);
         return vo;
+    }
+
+    @Override
+    public void updateItem(ItemUpdateDTO dto) {
+        //更新三张表
+        Long itemId = dto.getId();
+        Long currentUserId = UserContext.getUserId();
+
+        // 1. 校验该物品是否存在，以及是否为当前用户发布的
+        ItemInfo oldItem = this.getById(itemId);
+        if (oldItem == null) {
+            throw new BusinessException("该物品信息不存在");
+        }
+        if (!oldItem.getUserId().equals(currentUserId)) {
+            throw new BusinessException(ResultCodeEnum.FORBIDDEN, "你没有权限修改他人的帖子！");
+        }
+
+        // 2. 更新主表
+        ItemInfo itemInfo = new ItemInfo();
+        BeanUtil.copyProperties(dto, itemInfo);
+        this.updateById(itemInfo);
+
+        // 3. 更新详情表
+        ItemDetail itemDetail = new ItemDetail();
+        itemDetail.setItemId(itemId);
+        itemDetail.setSemiPublicDesc(dto.getSemiPublicDesc());
+        if (CollUtil.isNotEmpty(dto.getImagesUrlList())) {
+            itemDetail.setImagesUrl(JSONUtil.toJsonStr(dto.getImagesUrlList()));
+        } else {
+            itemDetail.setImagesUrl(null); // 如果前端传空，说明删除了所有图片
+        }
+        itemDetailService.updateById(itemDetail);
+
+        // 4. 更新核验表
+        // 先看用户是不是想关闭核验模式（把暗号和联系方式都置空）
+        if (StrUtil.isBlank(dto.getVerifyAnswer()) && StrUtil.isBlank(dto.getPrivateContact())) {
+            // 用户想关闭：直接把核验记录删掉
+            itemSecureService.removeById(itemId);
+        } else {
+            // 用户想开启或修改：必须两者都填
+            if (StrUtil.isBlank(dto.getVerifyAnswer()) || StrUtil.isBlank(dto.getPrivateContact())) {
+                throw new BusinessException("开启私密核验时，暗号与联系方式必须同时填写！");
+            }
+            ItemSecure itemSecure = new ItemSecure();
+            itemSecure.setItemId(itemId);
+            itemSecure.setVerifyAnswer(dto.getVerifyAnswer());
+            itemSecure.setPrivateContact(dto.getPrivateContact());
+            // 使用 saveOrUpdate：如果以前没开启就插入，开启了就更新
+            itemSecureService.saveOrUpdate(itemSecure);
+        }
+
+        log.info("物品信息更新成功，物品ID: {}, 操作人ID: {}", itemId, currentUserId);
     }
 }
 

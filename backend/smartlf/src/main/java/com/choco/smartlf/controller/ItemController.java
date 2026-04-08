@@ -4,6 +4,7 @@ import com.choco.smartlf.entity.Result;
 import com.choco.smartlf.entity.dto.ItemPublishDTO;
 import com.choco.smartlf.entity.dto.ItemReportDTO;
 import com.choco.smartlf.entity.dto.ItemTopApplyDTO;
+import com.choco.smartlf.entity.dto.ItemUpdateDTO;
 import com.choco.smartlf.entity.vo.ItemDetailVO;
 import com.choco.smartlf.entity.vo.ItemListVO;
 import com.choco.smartlf.service.ItemInfoService;
@@ -39,6 +40,13 @@ public class ItemController {
     public Result<ItemDetailVO> getItemDetail(@PathVariable Long id) {
         ItemDetailVO vo = itemInfoService.getItemDetail(id);
         return Result.success(vo);
+    }
+
+    @Operation(summary = "修改物品信息")
+    @PutMapping("/update")
+    public Result<Void> updateItem(@Validated @RequestBody ItemUpdateDTO dto) {
+        itemInfoService.updateItem(dto);
+        return Result.success();
     }
 
 //@Operation(summary = "举报物品信息")
