@@ -1,6 +1,7 @@
 package com.choco.smartlf.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.choco.smartlf.entity.dto.ItemReportDTO;
 import com.choco.smartlf.entity.pojo.ReportRecord;
 
 /**
@@ -10,4 +11,5 @@ import com.choco.smartlf.entity.pojo.ReportRecord;
 */
 public interface ReportRecordService extends IService<ReportRecord> {
 
+    void submitReport(ItemReportDTO dto);
 }

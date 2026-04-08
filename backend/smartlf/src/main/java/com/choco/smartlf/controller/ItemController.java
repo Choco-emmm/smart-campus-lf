@@ -6,6 +6,7 @@ import com.choco.smartlf.entity.dto.*;
 import com.choco.smartlf.entity.vo.ItemDetailVO;
 import com.choco.smartlf.entity.vo.ItemListVO;
 import com.choco.smartlf.service.ItemInfoService;
+import com.choco.smartlf.service.ReportRecordService;
 import com.choco.smartlf.service.TopApplyRecordService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -25,6 +26,7 @@ public class ItemController {
 
     private final ItemInfoService itemInfoService; // 这里用统一个门面 Service 管理三张表
     private final TopApplyRecordService topApplyRecordService;
+    private final ReportRecordService reportRecordService;
 
     @Operation(summary = "发布失物/招领")
     @PostMapping("/publish")
@@ -75,15 +77,15 @@ public class ItemController {
         IPage<ItemListVO> pageResult = itemInfoService.pageQuery(dto);
         return Result.success(pageResult);
     }
-//@Operation(summary = "举报物品信息")
-//@PostMapping("/report")
-//public Result<Void> reportItem(@Validated @RequestBody ItemReportDTO dto) {
-//    // 交给独立的举报 Service 处理，符合单一职责原则
-//    reportRecordService.submitReport(dto);
-//    return Result.success();
-//}
-//
-//
+    @Operation(summary = "举报物品信息")
+    @PostMapping("/report")
+    public Result<Void> reportItem(@Validated @RequestBody ItemReportDTO dto) {
+        // 交给独立的举报 Service 处理
+        reportRecordService.submitReport(dto);
+        return Result.success();
+    }
+
+
 @Operation(summary = "上传失物/招领图片", description = "发布/修改帖子前，先调用此接口上传图片换取URL")
 @PostMapping("/image")
 public Result<String> uploadItemImage(
