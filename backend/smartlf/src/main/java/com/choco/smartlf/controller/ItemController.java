@@ -1,10 +1,7 @@
 package com.choco.smartlf.controller;
 
 import com.choco.smartlf.entity.Result;
-import com.choco.smartlf.entity.dto.ItemPublishDTO;
-import com.choco.smartlf.entity.dto.ItemReportDTO;
-import com.choco.smartlf.entity.dto.ItemTopApplyDTO;
-import com.choco.smartlf.entity.dto.ItemUpdateDTO;
+import com.choco.smartlf.entity.dto.*;
 import com.choco.smartlf.entity.vo.ItemDetailVO;
 import com.choco.smartlf.entity.vo.ItemListVO;
 import com.choco.smartlf.service.ItemInfoService;
@@ -61,6 +58,13 @@ public class ItemController {
     @PostMapping("/top/apply")
     public Result<Void> applyTop(@Validated @RequestBody ItemTopApplyDTO dto) {
         topApplyRecordService.applyTop(dto);
+        return Result.success();
+    }
+
+    @Operation(summary = "修改物品状态 (联动取消置顶)")
+    @PutMapping("/status")
+    public Result<Void> updateStatus(@Validated @RequestBody ItemStatusUpdateDTO dto) {
+        itemInfoService.updateStatus(dto);
         return Result.success();
     }
 //@Operation(summary = "举报物品信息")

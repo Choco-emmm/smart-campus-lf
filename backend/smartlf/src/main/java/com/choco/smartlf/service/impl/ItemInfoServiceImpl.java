@@ -9,6 +9,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 
 import com.choco.smartlf.entity.dto.ItemPublishDTO;
+import com.choco.smartlf.entity.dto.ItemStatusUpdateDTO;
 import com.choco.smartlf.entity.dto.ItemTopApplyDTO;
 import com.choco.smartlf.entity.dto.ItemUpdateDTO;
 import com.choco.smartlf.entity.pojo.ItemDetail;
@@ -16,7 +17,9 @@ import com.choco.smartlf.entity.pojo.ItemInfo;
 import com.choco.smartlf.entity.pojo.ItemSecure;
 import com.choco.smartlf.entity.pojo.User;
 import com.choco.smartlf.entity.vo.ItemDetailVO;
+import com.choco.smartlf.enums.ItemStatusEnum;
 import com.choco.smartlf.enums.ResultCodeEnum;
+import com.choco.smartlf.enums.TopEnum;
 import com.choco.smartlf.exception.BusinessException;
 import com.choco.smartlf.mapper.ItemInfoMapper;
 import com.choco.smartlf.service.ItemDetailService;
@@ -248,6 +251,37 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
         removeById(id);
 
         log.info("物品物理删除成功，彻底清空三表数据，物品ID: {}, 操作人ID: {}", id, userId);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateStatus(ItemStatusUpdateDTO dto) {
+        Long currentUserId = UserContext.getUserId();
+
+        // 1. 安全校验：确认物品存在且是本人发布
+        ItemInfo item = this.getById(dto.getId());
+        if (item == null) {
+            throw new BusinessException("该物品信息不存在");
+        }
+        if (!item.getUserId().equals(currentUserId)) {
+            throw new BusinessException(ResultCodeEnum.FORBIDDEN, "你没有权限修改此帖子状态！");
+        }
+
+        // 2. 联动逻辑：如果状态改为“已结案(2)”，自动取消置顶
+        // 这里的2 对应 ItemStatusEnum 中的定义
+        if (dto.getStatus().equals(ItemStatusEnum.CLOSED.getCode())) {
+
+            // 只有当它目前是置顶状态时才需要修改，减少不必要的数据库写操作
+            if (item.getIsTop().equals(TopEnum.YES.getCode())) {
+                item.setIsTop(TopEnum.NO.getCode());
+                item.setTopEndTime(null); // 清空结束时间
+                log.info("物品状态变为非活跃，自动取消置顶。物品ID: {}", item.getId());
+            }
+        }
+
+        // 3. 执行状态更新
+        item.setStatus(dto.getStatus());
+        this.updateById(item);
     }
 }
 
