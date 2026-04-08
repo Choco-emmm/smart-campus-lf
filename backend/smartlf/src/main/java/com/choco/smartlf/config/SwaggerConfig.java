@@ -20,15 +20,15 @@ public class SwaggerConfig {
                         .version("v1.0")
                         .contact(new Contact().name("Choco").email("renpei233@gmail.com")))
 
-                // 1. 定义全局 Token 规则：告诉 Swagger 我们用的是放置在 Header 中的字段，名字叫 "token"
                 .components(new Components()
                         .addSecuritySchemes("token", new SecurityScheme()
-                                .name("token")
+                                .name("token") // 这里的名字必须和拦截器中读取的一致
                                 .type(SecurityScheme.Type.APIKEY)
                                 .in(SecurityScheme.In.HEADER)
+                                // 🌟 增加下面这一行描述，解决“没有信息”的问题
+                                .description("请输入登录接口返回的 token。注意：不要加 'Bearer ' 前缀，直接粘贴字符串即可。")
                         ))
 
-                // 2. 将这个规则应用到全局所有的接口上
                 .addSecurityItem(new SecurityRequirement().addList("token"));
     }
 }

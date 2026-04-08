@@ -14,7 +14,9 @@ import com.choco.smartlf.exception.BusinessException;
 import com.choco.smartlf.service.UserService;
 import com.choco.smartlf.utils.UserContext;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.headers.Header;
 import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -72,9 +74,13 @@ public class UserController {
         return Result.success();
     }
 
-    @Operation(summary = "用户登录")
+    @Operation(summary = "用户登录", description = "登录成功后，请从【响应头】中获取 token 字段（或从响应体 data 中获取）。")
     @SecurityRequirements()
     @PostMapping("/login")
+    @ApiResponse(
+            responseCode = "200",
+            description = "登录成功。注意：响应头(Headers)中已包含 token 令牌"
+    )
     public Result<UserLoginVO> login(@Validated @RequestBody UserLoginDTO dto) {
         UserLoginVO vo = userService.login(dto);
         return Result.success(vo);

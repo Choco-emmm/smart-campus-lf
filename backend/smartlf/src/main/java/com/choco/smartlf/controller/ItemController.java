@@ -64,20 +64,20 @@ public class ItemController {
         return Result.success();
     }
 
-    @Operation(summary = "修改物品状态 (联动取消置顶)")
+    @Operation(summary = "修改失物信息状态 (联动取消置顶)")
     @PutMapping("/status")
     public Result<Void> updateStatus(@Validated @RequestBody ItemStatusUpdateDTO dto) {
         itemInfoService.updateStatus(dto);
         return Result.success();
     }
 
-    @Operation(summary = "分页查询物品列表广场")
+    @Operation(summary = "分页查询失物信息列表广场")
     @GetMapping("/page")
     public Result<IPage<ItemListVO>> getPage(ItemPageQueryDTO dto) {
         IPage<ItemListVO> pageResult = itemInfoService.pageQuery(dto);
         return Result.success(pageResult);
     }
-    @Operation(summary = "举报物品信息")
+    @Operation(summary = "举报失物信息")
     @PostMapping("/report")
     public Result<Void> reportItem(@Validated @RequestBody ItemReportDTO dto) {
         // 交给独立的举报 Service 处理
