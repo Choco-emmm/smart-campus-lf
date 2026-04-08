@@ -1,5 +1,6 @@
 package com.choco.smartlf.task;
 
+import cn.hutool.core.date.DateUtil;
 import com.choco.smartlf.entity.pojo.User;
 import com.choco.smartlf.entity.pojo.UserActiveLog;
 import com.choco.smartlf.service.UserActiveLogService;
@@ -11,8 +12,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -51,8 +52,10 @@ public class UserActiveSyncTask {
 
         // 3. 遍历刚才捞出来的数据，准备存库
         for (Map.Entry<Object, Object> entry : entries.entrySet()) {
+            long timestamp = Long.parseLong(entry.getValue().toString());
+            //先把 Redis 里的 String 强转回 long 类型的毫秒时间戳
             Long userId = Long.valueOf(entry.getKey().toString());
-            Date activeDate = new Date(Long.parseLong(entry.getValue().toString()));
+            LocalDateTime activeDate = DateUtil.date(timestamp).toLocalDateTime();
 
             // 组装 User 实体（用于更新最后活跃时间）
             User user = new User();

@@ -1,6 +1,7 @@
 package com.choco.smartlf.entity.pojo;
 
 
+import java.time.LocalDateTime;
 import java.util.Date;
 
 import com.baomidou.mybatisplus.annotation.IdType;
@@ -31,11 +32,11 @@ public class User {
     @Schema(description="0:正常, 1:封禁", implementation = com.choco.smartlf.enums.UserStatusEnum.class)
     private Integer status;
     @Schema(description="最后活跃时间")
-    private Date lastActiveTime;
+    private LocalDateTime lastActiveTime;
     @Schema(description="注册时间")
-    private Date createTime;
+    private LocalDateTime createTime;
     @Schema(description="最后修改时间")
-    private Date updateTime;
+    private LocalDateTime updateTime;
     @TableLogic
     @Schema(description="逻辑删除（0:未删, 1:已删）", implementation = com.choco.smartlf.enums.DeletedEnum.class)
     private Integer isDeleted;
