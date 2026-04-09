@@ -23,4 +23,6 @@ public class TopApplyRecord {
     private Integer status;
     @Schema(description="申请时间")
     private Date createTime;
+    @Schema(description="管理员处理备注")
+    private String processRemark;
 }

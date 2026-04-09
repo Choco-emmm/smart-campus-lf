@@ -24,4 +24,6 @@ public class ReportRecord {
     private Integer status;
     @Schema(description="")
     private LocalDateTime createTime;
+    @Schema(description="管理员处理备注")
+    private String processRemark;
 }
