@@ -48,9 +48,9 @@ public class AdminController {
         AdminStatsVO stats = itemInfoService.getPlatformStats(startTime, endTime);
         return Result.success(stats);
     }
-//
+
 //    // ================== 2. 举报审核闭环 ==================
-//
+
     @Operation(summary = "分页查询举报列表",description ="支持按状态筛选，按举报时间倒序排序")
     @PostMapping("/report/page")
     public Result<IPage<ReportRecord>> pageReport(@Validated @RequestBody AdminReportPageDTO dto) {
@@ -61,11 +61,10 @@ public class AdminController {
 //    @Operation(summary = "处理举报 (联动下架)", description = "核实举报属实后，会自动将帖子修改为违规下架状态")
 //    @PutMapping("/report/resolve")
 //    public Result<Void> resolveReport(@Validated @RequestBody AdminReportResolveDTO dto) {
-//        // TODO: 明天在 reportRecordService 写一个带有 @Transactional 的方法处理状态联动
 //        reportRecordService.resolveReport(dto);
 //        return Result.success();
 //    }
-//
+
 //    // ================== 3. 置顶审核闭环 ==================
 //
 //    @Operation(summary = "分页查询置顶申请列表")

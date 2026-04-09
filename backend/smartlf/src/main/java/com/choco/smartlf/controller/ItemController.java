@@ -35,7 +35,6 @@ public class ItemController {
         return Result.success();
     }
 
-// TODO: 分页查询列表接口 (后续结合 MyBatis-Plus 分页插件实现)
 
     @Operation(summary = "获取信息详情")
     @GetMapping("/{id}")
@@ -44,13 +43,13 @@ public class ItemController {
         return Result.success(vo);
     }
 
-    @Operation(summary = "修改物品信息(仅限发帖人)")
+    @Operation(summary = "修改失物信息(仅限发帖人)")
     @PutMapping("/update")
     public Result<Void> updateItem(@Validated @RequestBody ItemUpdateDTO dto) {
         itemInfoService.updateItem(dto);
         return Result.success();
     }
-    @Operation(summary = "删除物品信息 (仅限发帖人)")
+    @Operation(summary = "删除失物信息 (仅限发帖人)")
     @DeleteMapping("/{id}")
     public Result<Void> deleteItem(
             @Schema(description = "要删除的物品ID", required = true) @PathVariable Long id) {

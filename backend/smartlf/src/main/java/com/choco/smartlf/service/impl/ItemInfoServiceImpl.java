@@ -15,6 +15,7 @@ import com.choco.smartlf.entity.pojo.*;
 import com.choco.smartlf.entity.vo.AdminStatsVO;
 import com.choco.smartlf.entity.vo.ItemDetailVO;
 import com.choco.smartlf.entity.vo.ItemListVO;
+import com.choco.smartlf.enums.DeletedEnum;
 import com.choco.smartlf.enums.ItemStatusEnum;
 import com.choco.smartlf.enums.ResultCodeEnum;
 import com.choco.smartlf.enums.TopEnum;
@@ -240,14 +241,10 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
         if (!item.getUserId().equals(userId)) {
             throw new BusinessException(ResultCodeEnum.FORBIDDEN, "你没有权限删除他人的帖子！");
         }
-        //删除核验表信息
-        itemSecureService.removeById(id);
-        //删除详情表信息
-        itemDetailService.removeById(id);
-        //删除主表信息
-        removeById(id);
-
-        log.info("物品物理删除成功，彻底清空三表数据，物品ID: {}, 操作人ID: {}", id, userId);
+        item.setIsDeleted(DeletedEnum.YES.getCode());
+       //将物品信息逻辑删除
+        this.removeById(id);
+        log.info("物品信息逻辑删除成功，物品ID: {}, 操作人ID: {}", id, userId);
     }
 
     @Override
@@ -289,7 +286,7 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
         // 2. 构造查询条件
         LambdaQueryWrapper<ItemInfo> wrapper = new LambdaQueryWrapper<>();
 
-        // 防线：绝对不能把违规下架的帖子展示出来
+        // 被管理员封禁的绝对不显示
         wrapper.ne(ItemInfo::getStatus, ItemStatusEnum.BANNED.getCode());
 
         // 动态条件过滤
