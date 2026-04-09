@@ -33,4 +33,6 @@ public interface ItemInfoService extends IService<ItemInfo> {
     IPage<ItemListVO> pageQuery(ItemPageQueryDTO dto);
 
     AdminStatsVO getPlatformStats(LocalDateTime startTime, LocalDateTime endTime);
+
+    IPage<ItemListVO> myPublishPage(Integer pageNum, Integer pageSize);
 }

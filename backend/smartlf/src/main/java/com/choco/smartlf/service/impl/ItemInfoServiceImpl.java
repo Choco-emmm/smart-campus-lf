@@ -356,6 +356,43 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
 
         return vo;
     }
+
+    @Override
+    public IPage<ItemListVO> myPublishPage(Integer pageNum, Integer pageSize) {
+        // 1. 获取当前登录用户 ID
+        Long currentUserId = UserContext.getUserId();
+
+        // 2. 构造分页对象和查询条件
+        Page<ItemInfo> page = new Page<>(pageNum, pageSize);
+        LambdaQueryWrapper<ItemInfo> wrapper = new LambdaQueryWrapper<>();
+
+        // 🌟 核心条件：只查自己的
+        wrapper.eq(ItemInfo::getUserId, currentUserId);
+
+        // 这里绝不加 status != 3 的条件，能查出违规贴。
+
+        // 按创建时间倒序（最新的在最上面）
+        wrapper.orderByDesc(ItemInfo::getCreateTime);
+
+        // 3. 执行查询
+        this.page(page, wrapper);
+
+        // 4. 数据转换：ItemInfo -> ItemListVO (和广场的转换逻辑一致，带上封面图)
+        return page.convert(itemInfo -> {
+            ItemListVO vo = new ItemListVO();
+            BeanUtil.copyProperties(itemInfo, vo);
+
+            // 去详情表拿第一张图片当封面
+            ItemDetail detail = itemDetailService.getById(itemInfo.getId());
+            if (detail != null && StrUtil.isNotBlank(detail.getImagesUrl())) {
+                List<String> images = JSONUtil.toList(detail.getImagesUrl(), String.class);
+                if (CollUtil.isNotEmpty(images)) {
+                    vo.setCoverImage(images.getFirst());
+                }
+            }
+            return vo;
+        });
+    }
 }
 
 
