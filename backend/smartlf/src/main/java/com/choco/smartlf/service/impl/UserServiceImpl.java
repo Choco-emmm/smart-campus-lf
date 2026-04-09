@@ -271,6 +271,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             throw new BusinessException("该用户不存在或已被注销");
         }
 
+        if (user.getRole().equals(RoleEnum.ADMIN.getCode())) {
+            throw new BusinessException(ResultCodeEnum.FORBIDDEN,"该用户同为管理员，无法查看敏感信息！");
+        }
+
         // 2. 转换基础数据
         AdminUserInfoVO vo = new AdminUserInfoVO();
         BeanUtil.copyProperties(user, vo);
@@ -289,6 +293,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 
     @Override
     public IPage<User> pageQueryUser(AdminUserPageDTO dto) {
+        //todo 虽然User会返回一个没必要的身份，懒得再弄一个vo了，之后有需要再说吧！
+
         // 1. 创建分页对象
         Page<User> page = new Page<>(dto.getPage(), dto.getPageSize());
 

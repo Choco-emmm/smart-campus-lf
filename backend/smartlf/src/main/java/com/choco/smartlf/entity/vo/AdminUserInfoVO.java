@@ -19,17 +19,8 @@ public class AdminUserInfoVO {
     @Schema(description = "昵称")
     private String nickname;
 
-    @Schema(description = "邮箱")
-    private String email;
-
-    @Schema(description = "手机号")
-    private String phone;
-
     @Schema(description = "头像URL")
     private String avatarUrl;
-
-    @Schema(description = "角色 (0-学生, 1-管理员)")
-    private Integer role;
 
     @Schema(description = "注册时间")
     private LocalDateTime createTime;
@@ -43,4 +34,10 @@ public class AdminUserInfoVO {
 
     @Schema(description = "违规发帖次数 (被下架的帖子数量)")
     private Integer violationCount;
+
+    @Schema(description = "邮箱")
+    private String email;
+
+    @Schema(description = "手机号")
+    private String phone;
 }
