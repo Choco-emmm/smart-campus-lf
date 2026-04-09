@@ -34,5 +34,7 @@ public interface UserService extends IService<User> {
 
     AdminUserInfoVO getUserDetailByAdmin(Long userId);
 
-    IPage<User> pageQueryUser(AdminUserPageDTO dto);
+    IPage<User> pageQueryUserByAdmin(AdminUserPageDTO dto);
+
+    void updateUserStatusByAdmin(Long userId, Integer status);
 }

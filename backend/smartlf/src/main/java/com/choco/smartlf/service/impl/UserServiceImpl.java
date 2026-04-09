@@ -292,7 +292,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     }
 
     @Override
-    public IPage<User> pageQueryUser(AdminUserPageDTO dto) {
+    public IPage<User> pageQueryUserByAdmin(AdminUserPageDTO dto) {
         //todo 虽然User会返回一个没必要的身份，懒得再弄一个vo了，之后有需要再说吧！
 
         // 1. 创建分页对象
@@ -321,6 +321,61 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 
         // 4. 执行查询并返回结果
         return this.page(page, wrapper);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateUserStatusByAdmin(Long userId, Integer status) {
+        log.info("管理员试图修改用户状态，目标ID: {}, 目标状态: {}", userId, status);
+
+        // 1. 查询目标用户
+        User targetUser = this.getById(userId);
+        if (targetUser == null) {
+            throw new BusinessException(ResultCodeEnum.USER_NOT_FOUND);
+        }
+
+        // 2. 绝对禁止操作管理员
+        // 当目标用户是“管理员”时，直接抛异常拦截
+        //其实界面上不会显示管理员信息，也不会让管理员有封禁其他管理员的机会，就是怕有人乱发请求
+        if (RoleEnum.ADMIN.getCode().equals(targetUser.getRole())) {
+            log.warn("越权拦截：有人试图封禁/解封管理员账号！目标ID: {}", userId);
+            throw new BusinessException(ResultCodeEnum.FORBIDDEN, "系统严禁操作管理员账号！");
+        }
+
+        //不能重复修改
+        if(targetUser.getStatus().equals(status)){
+            log.warn("用户状态已修改，请勿重复操作！目标ID: {}", userId);
+            throw new BusinessException("用户状态已修改，请勿重复操作！");
+        }
+
+        // 3. 修改数据库状态
+        targetUser.setStatus(status);
+        this.updateById(targetUser);
+
+        // 4. Redis 动态踢人逻辑
+        String redisKey = Constant.TOKEN_PREFIX + userId;
+
+        if (UserStatusEnum.BANNED.getCode().equals(status)) {
+            // 如果是封禁操作：获取该用户 Token 在 Redis 中的剩余寿命
+            long expire = redisTemplate.getExpire(redisKey, TimeUnit.SECONDS);
+
+            // 如果该用户当前在线（Redis 中有 Token 且未过期）
+            if (expire > 0) {
+                // 覆盖原有 Token，改为 'banned'，并沿用剩余寿命！这样到期会自动清理，不占内存
+                redisTemplate.opsForValue().set(redisKey, Constant.TOKEN_BANNED_VALUE, expire, TimeUnit.SECONDS);
+                log.info("用户在线，已通过 Redis 强制下线，用户ID: {}", userId);
+            }
+        } else if (Constant.STATUS_NORMAL.equals(status)) {
+            // 如果是解封操作：判断 Redis 里是不是还残留着 'banned'
+            String redisValue = redisTemplate.opsForValue().get(redisKey);
+            if (Constant.TOKEN_BANNED_VALUE.equals(redisValue)) {
+                // 解封后直接删掉 Redis 记录，强制他重新登录获取新 Token
+                redisTemplate.delete(redisKey);
+            }
+        }
+
+        log.info("用户状态修改成功，目标ID: {}, 新状态: {}", userId, status);
+
     }
 
     // --- 私有辅助方法 ---

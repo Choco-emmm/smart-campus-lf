@@ -17,11 +17,13 @@ import com.choco.smartlf.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import javax.validation.constraints.NotNull;
 import java.time.LocalDateTime;
 
 @Tag(name = "03. 管理员模块", description = "仅管理员可访问的全局控制接口")
@@ -121,24 +123,18 @@ public class AdminController {
     @Operation(summary = "分页查询用户列表", description = "支持按关键字搜索和按状态筛选")
     @PostMapping("/user/page")
     public Result<IPage<User>> pageUser(@Validated @RequestBody AdminUserPageDTO dto) {
-        IPage<User> page = userService.pageQueryUser(dto);
+        IPage<User> page = userService.pageQueryUserByAdmin(dto);
         return Result.success(page);
     }
-//
-//    @Operation(summary = "查看用户详情", description = "点击列表详情按钮时调用，获取包含违规次数等敏感数据")
-//    @GetMapping("/user/{userId}")
-//    public Result<AdminUserInfoVO> getUserDetail(@Parameter(description = "用户主键ID") @PathVariable Long userId) {
-//        AdminUserInfoVO vo = userService.getUserDetailByAdmin(userId);
-//        return Result.success(vo);
-//    }
-//
-//    @Operation(summary = "封禁/解封用户账号", description = "列表页和详情页的封禁/解封按钮共用此接口")
-//    @PutMapping("/user/status/{userId}")
-//    public Result<Void> updateUserStatus(
-//            @Parameter(description = "用户主键ID") @PathVariable Long userId,
-//            @Parameter(description = "状态 (0:正常, 1:封禁)") @RequestParam Integer status) {
-//        // TODO: update user set status = #{status} where id = #{userId}
-//        userService.updateStatusByAdmin(userId, status);
-//        return Result.success();
-//    }
+
+    @Operation(summary = "封禁/解封用户账号", description = "列表页和详情页的封禁/解封按钮共用此接口，" +
+            "封禁的同时通过userId把redis里的token设为'banned'并沿用TTL,在拦截器里要是看到这个就直接提示被封禁" +
+            "并且管理员无法封禁管理员，管理员最多只能下架别的管理员的帖子（以防事态发酵的时候发帖的管理员不在）")
+    @PutMapping("/user/status/{userId}")
+    public Result<Void> updateUserStatus(
+            @Parameter(description = "用户主键ID") @PathVariable @NotNull Long userId,
+            @Parameter(description = "状态 (0:解封, 1:封禁)") @RequestParam @NotNull Integer status) {
+        userService.updateUserStatusByAdmin(userId, status);
+        return Result.success();
+    }
 }

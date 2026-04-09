@@ -1,9 +1,7 @@
 package com.choco.smartlf.utils;
 
 public class Constant {
-    // 角色常量，0-学生，1-管理员
-    public static final Integer STU_ROLE = 0;
-    public static final Integer ADMIN_ROLE = 1;
+
     /**
      * 昵称正则：1-16位，除了空格其他都允许
      */
@@ -55,4 +53,5 @@ public class Constant {
      */
     public static final Integer STATUS_NORMAL = 0;
 
+    public static final String TOKEN_BANNED_VALUE = "banned";
 }
