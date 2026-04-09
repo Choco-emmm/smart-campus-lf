@@ -37,7 +37,7 @@ public class AdminController {
     private final ItemInfoService itemInfoService;
     private final UserService userService;
 //
-//    // ================== 1. 平台数据看板 ==================
+    // ================== 1. 平台数据看板 ==================
 
     @Operation(summary = "获取平台全局统计数据", description = "包含发帖量、找回率，以及指定时间段内的活跃人数等")
     @GetMapping("/stats/overview")
@@ -53,14 +53,15 @@ public class AdminController {
         return Result.success(stats);
     }
 
-//    // ================== 2. 举报审核闭环 ==================
+    // ================== 2. 举报审核 ==================
 
-    @Operation(summary = "分页查询举报列表",description ="支持按状态/举报理由筛选，按举报时间倒序排序")
+    @Operation(summary = "分页查询举报列表", description = "支持按状态/举报理由筛选，按举报时间倒序排序")
     @PostMapping("/report/page")
     public Result<IPage<ReportRecord>> pageReport(@Validated @RequestBody AdminReportPageDTO dto) {
         IPage<ReportRecord> page = reportRecordService.pageQuery(dto);
         return Result.success(page);
     }
+
     @Operation(summary = "查看举报单详情", description = "包含举报人、理由及原帖跳转所需ID加举报人的ID和昵称")
     @GetMapping("/report/{reportId}")
     public Result<AdminReportDetailVO> getReportDetail(@Parameter(description = "举报单ID") @PathVariable Long reportId) {
@@ -75,7 +76,7 @@ public class AdminController {
         return Result.success();
     }
 
-//    // ================== 3. 置顶审核闭环 ==================
+    // ================== 3. 置顶审核 ==================
 
     @Operation(summary = "分页查询置顶申请列表")
     @PostMapping("/top-apply/page")
