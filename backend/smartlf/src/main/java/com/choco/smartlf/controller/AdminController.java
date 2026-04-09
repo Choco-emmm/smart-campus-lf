@@ -16,8 +16,11 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDateTime;
 
 @Tag(name = "03. 管理员模块", description = "仅管理员可访问的全局控制接口")
 @RestController
@@ -31,14 +34,20 @@ public class AdminController {
     private final UserService userService;
 //
 //    // ================== 1. 平台数据看板 ==================
-//
-//    @Operation(summary = "获取平台全局统计数据", description = "包含发帖量、找回率、活跃人数等")
-//    @GetMapping("/stats/overview")
-//    public Result<AdminStatsVO> getStatsOverview() {
-//        // TODO: 明天在 itemInfoService 里写个 getPlatformStats() 方法
-//        AdminStatsVO stats = itemInfoService.getPlatformStats();
-//        return Result.success(stats);
-//    }
+
+    @Operation(summary = "获取平台全局统计数据", description = "包含发帖量、找回率，以及指定时间段内的活跃人数等")
+    @GetMapping("/stats/overview")
+    public Result<AdminStatsVO> getStatsOverview(
+            @Parameter(description = "开始时间 (格式: yyyy-MM-dd HH:mm:ss，不传默认统计近7天)")
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startTime,
+
+            @Parameter(description = "结束时间 (格式: yyyy-MM-dd HH:mm:ss，不传默认当前时间)")
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endTime) {
+
+        // 传递给 Service 层处理
+        AdminStatsVO stats = itemInfoService.getPlatformStats(startTime, endTime);
+        return Result.success(stats);
+    }
 //
 //    // ================== 2. 举报审核闭环 ==================
 //

@@ -11,10 +11,8 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 
 import com.choco.smartlf.entity.dto.*;
-import com.choco.smartlf.entity.pojo.ItemDetail;
-import com.choco.smartlf.entity.pojo.ItemInfo;
-import com.choco.smartlf.entity.pojo.ItemSecure;
-import com.choco.smartlf.entity.pojo.User;
+import com.choco.smartlf.entity.pojo.*;
+import com.choco.smartlf.entity.vo.AdminStatsVO;
 import com.choco.smartlf.entity.vo.ItemDetailVO;
 import com.choco.smartlf.entity.vo.ItemListVO;
 import com.choco.smartlf.enums.ItemStatusEnum;
@@ -22,10 +20,7 @@ import com.choco.smartlf.enums.ResultCodeEnum;
 import com.choco.smartlf.enums.TopEnum;
 import com.choco.smartlf.exception.BusinessException;
 import com.choco.smartlf.mapper.ItemInfoMapper;
-import com.choco.smartlf.service.ItemDetailService;
-import com.choco.smartlf.service.ItemInfoService;
-import com.choco.smartlf.service.ItemSecureService;
-import com.choco.smartlf.service.UserService;
+import com.choco.smartlf.service.*;
 import com.choco.smartlf.utils.ImageNameUtil;
 import com.choco.smartlf.utils.UserContext;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -55,6 +51,7 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
     private final ItemDetailService itemDetailService;
     private final ItemSecureService itemSecureService;
     private final UserService userService;
+    private final UserActiveLogService userActiveLogService;
 
     @Transactional(rollbackFor = Exception.class)
     @Override
@@ -237,7 +234,7 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
         //安全核验
         Long userId = UserContext.getUserId();
         ItemInfo item = getById(id);
-        if(item==null){
+        if (item == null) {
             throw new BusinessException("该物品信息不存在");
         }
         if (!item.getUserId().equals(userId)) {
@@ -325,6 +322,42 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
             }
             return vo;
         });
+    }
+
+    @Override
+    public AdminStatsVO getPlatformStats(LocalDateTime startTime, LocalDateTime endTime) {
+        // 1. 时间兜底逻辑：保护后端不报空指针
+        if (endTime == null) {
+            endTime = LocalDateTime.now(); // 默认当前时间
+        }
+        if (startTime == null) {
+            startTime = endTime.minusDays(7); // 默认往前推7天
+        }
+
+        AdminStatsVO vo = new AdminStatsVO();
+
+        // 2. 统计总发帖量 (不加条件，直接查 ItemInfo 全表)
+        long totalItems = this.count();
+        vo.setTotalItems(totalItems);
+
+        // 3. 统计已结案(找回)数量
+        long solvedItems = this.count(new LambdaQueryWrapper<ItemInfo>()
+                .eq(ItemInfo::getStatus, ItemStatusEnum.CLOSED.getCode()));
+        vo.setSolvedItems(solvedItems);
+
+
+        // 5. 统计指定时间内的活跃用户数 (按 userId 去重)
+        // 因为 MyBatis-Plus 的 count() 默认是 SELECT COUNT(*)，无法直接去重
+        // 所以我们这里用 groupBy 分组查询来达到去重的效果，获取分组后的集合大小
+        long activeUsers = userActiveLogService.list(new LambdaQueryWrapper<UserActiveLog>()
+                .select(UserActiveLog::getUserId) // 只查 userId 字段，节省内存
+                .ge(UserActiveLog::getActiveTime, startTime) // 大于等于开始时间
+                .le(UserActiveLog::getActiveTime, endTime)   // 小于等于结束时间
+                .groupBy(UserActiveLog::getUserId) // 按用户ID去重
+        ).size();
+        vo.setActiveUsers(activeUsers);
+
+        return vo;
     }
 }
 

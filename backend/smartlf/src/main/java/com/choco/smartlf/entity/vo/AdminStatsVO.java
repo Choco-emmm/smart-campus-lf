@@ -13,9 +13,6 @@ public class AdminStatsVO {
     @Schema(description = "已结案(找回)数量")
     private Long solvedItems;
 
-    @Schema(description = "整体找回率(百分比字符串)")
-    private String retrieveRate;
-
-    @Schema(description = "今日活跃用户数")
-    private Long dailyActiveUsers;
+    @Schema(description = "指定时间段内的活跃用户数")
+    private Long activeUsers;
 }
