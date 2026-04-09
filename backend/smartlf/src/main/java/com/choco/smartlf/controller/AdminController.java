@@ -52,7 +52,7 @@ public class AdminController {
 
 //    // ================== 2. 举报审核闭环 ==================
 
-    @Operation(summary = "分页查询举报列表",description ="支持按状态筛选，按举报时间倒序排序")
+    @Operation(summary = "分页查询举报列表",description ="支持按状态/举报理由筛选，按举报时间倒序排序")
     @PostMapping("/report/page")
     public Result<IPage<ReportRecord>> pageReport(@Validated @RequestBody AdminReportPageDTO dto) {
         IPage<ReportRecord> page = reportRecordService.pageQuery(dto);

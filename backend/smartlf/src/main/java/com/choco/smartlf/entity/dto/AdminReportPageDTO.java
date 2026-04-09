@@ -15,4 +15,7 @@ public class AdminReportPageDTO {
 
     @Schema(description = "举报状态 (0:待处理, 1:已核实, 2:已驳回)，不传则查全部")
     private Integer status;
+
+    @Schema(description = "举报理由")
+    private String reason;
 }

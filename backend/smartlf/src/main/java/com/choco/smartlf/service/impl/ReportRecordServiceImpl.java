@@ -82,7 +82,8 @@ public class ReportRecordServiceImpl extends ServiceImpl<ReportRecordMapper, Rep
 
         // 如果传了状态举报状态 (0:待处理, 1:已核实, 2:已驳回)，则进行过滤
         queryWrapper.eq(dto.getStatus() != null, ReportRecord::getStatus, dto.getStatus());
-
+        // 如果传了举报理由
+        queryWrapper.like(StrUtil.isNotBlank(dto.getReason()), ReportRecord::getReason, dto.getReason());
         // 排序，通常举报记录应该按“创建时间”倒序排列，让管理员先看到最新的举报
         queryWrapper.orderByDesc(ReportRecord::getCreateTime);
 
