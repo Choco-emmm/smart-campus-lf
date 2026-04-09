@@ -7,10 +7,14 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.choco.smartlf.entity.dto.AdminReportPageDTO;
+import com.choco.smartlf.entity.dto.AdminReportResolveDTO;
 import com.choco.smartlf.entity.dto.ItemReportDTO;
 import com.choco.smartlf.entity.pojo.ItemInfo;
 import com.choco.smartlf.entity.pojo.ReportRecord;
+import com.choco.smartlf.enums.AdminAuditActionEnum;
+import com.choco.smartlf.enums.ItemStatusEnum;
 import com.choco.smartlf.enums.ReportRecordEnum;
+import com.choco.smartlf.enums.TopEnum;
 import com.choco.smartlf.exception.BusinessException;
 import com.choco.smartlf.mapper.ReportRecordMapper;
 import com.choco.smartlf.service.ReportRecordService;
@@ -18,6 +22,7 @@ import com.choco.smartlf.utils.UserContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
 * @author renpe
@@ -78,6 +83,61 @@ public class ReportRecordServiceImpl extends ServiceImpl<ReportRecordMapper, Rep
 
         // 3. 执行查询并返回
         return this.page(page, queryWrapper);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class) // 开启事务控制
+    public void resolveReport(AdminReportResolveDTO dto) {
+        // 1. 查询该举报记录
+        ReportRecord report = this.getById(dto.getReportId());
+        if (report == null) {
+            throw new BusinessException("该举报记录不存在！");
+        }
+
+        // 2. 防止管理员重复处理同一条举报
+        if (!report.getStatus().equals(ReportRecordEnum.WAITING.getCode())) {
+            throw new BusinessException("该举报已被处理，请勿重复操作！");
+        }
+
+        // 3. 根据管理员的动作进行分支处理
+        if (dto.getAction().equals(AdminAuditActionEnum.PASS.getCode())) {
+            // ================= 动作 1：核实违规并下架 =================
+            // a. 修改举报单状态为“已核实”
+            report.setStatus(ReportRecordEnum.VERIFYING.getCode());
+
+            // b. 联动修改对应的物品状态
+            ItemInfo item = itemInfoService.getById(report.getItemId());
+            if (item != null) {
+                // 将帖子状态改为“违规下架(3)”
+                item.setStatus(ItemStatusEnum.BANNED.getCode());
+
+                // 细节：如果这个帖子是置顶帖子，违规了必须同时取消置顶
+                if (item.getIsTop().equals(TopEnum.YES.getCode())) {
+                    item.setIsTop(TopEnum.NO.getCode());
+                    item.setTopEndTime(null);
+                }
+
+                itemInfoService.updateById(item);
+                log.info("举报核实联动：物品ID {} 已被违规下架", item.getId());
+            }
+
+        } else if (dto.getAction().equals(AdminAuditActionEnum.REJECT.getCode())) {
+            // ================= 动作 2：驳回举报 =================
+            // 修改举报单状态为“已驳回”，不用动原帖子
+            report.setStatus(ReportRecordEnum.REJECTED.getCode());
+        } else {
+            throw new BusinessException("无效的处理动作参数！");
+        }
+
+        // 4. 记录管理员的审批备注 (如果有的话)
+        if (StrUtil.isNotBlank(dto.getRemark())) {
+            report.setProcessRemark(dto.getRemark());
+        }
+
+        // 5. 保存举报单的修改
+        this.updateById(report);
+
+        log.info("管理员处理举报成功，举报单ID: {}, 处理动作: {}", dto.getReportId(), dto.getAction());
     }
 }
 

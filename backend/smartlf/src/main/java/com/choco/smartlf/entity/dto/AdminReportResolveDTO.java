@@ -15,6 +15,6 @@ public class AdminReportResolveDTO {
     @Schema(description = "处理动作 (1:核实违规并下架, 2:驳回举报)", requiredMode = Schema.RequiredMode.REQUIRED)
     private Integer action;
 
-    @Schema(description = "管理员处理备注(可选)")
+    @Schema(description = "管理员处理备注")
     private String remark;
 }

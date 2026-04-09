@@ -57,13 +57,14 @@ public class AdminController {
         IPage<ReportRecord> page = reportRecordService.pageQuery(dto);
         return Result.success(page);
     }
-//
-//    @Operation(summary = "处理举报 (联动下架)", description = "核实举报属实后，会自动将帖子修改为违规下架状态")
-//    @PutMapping("/report/resolve")
-//    public Result<Void> resolveReport(@Validated @RequestBody AdminReportResolveDTO dto) {
-//        reportRecordService.resolveReport(dto);
-//        return Result.success();
-//    }
+
+
+    @Operation(summary = "处理举报 (联动下架)", description = "核实举报属实后，会自动将帖子修改为违规下架状态，同时取消可能的置顶状态")
+    @PutMapping("/report/resolve")
+    public Result<Void> resolveReport(@Validated @RequestBody AdminReportResolveDTO dto) {
+        reportRecordService.resolveReport(dto);
+        return Result.success();
+    }
 
 //    // ================== 3. 置顶审核闭环 ==================
 //
