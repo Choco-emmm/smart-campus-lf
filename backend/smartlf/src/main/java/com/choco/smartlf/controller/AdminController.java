@@ -73,14 +73,13 @@ public class AdminController {
     }
 
 //    // ================== 3. 置顶审核闭环 ==================
-//
-//    @Operation(summary = "分页查询置顶申请列表")
-//    @PostMapping("/top-apply/page")
-//    public Result<IPage<TopApplyRecord>> pageTopApply(@Validated @RequestBody AdminTopPageDTO dto) {
-//        // TODO: 明天在 topApplyRecordService 实现按状态分页
-//        IPage<TopApplyRecord> page = topApplyRecordService.pageQuery(dto);
-//        return Result.success(page);
-//    }
+
+    @Operation(summary = "分页查询置顶申请列表")
+    @PostMapping("/top-apply/page")
+    public Result<IPage<TopApplyRecord>> pageTopApply(@Validated @RequestBody AdminTopPageDTO dto) {
+        IPage<TopApplyRecord> page = topApplyRecordService.pageQuery(dto);
+        return Result.success(page);
+    }
 //
 //    @Operation(summary = "审批置顶申请 (联动主表)", description = "同意后自动将 ItemInfo 设为置顶，并计算过期时间")
 //    @PutMapping("/top-apply/resolve")

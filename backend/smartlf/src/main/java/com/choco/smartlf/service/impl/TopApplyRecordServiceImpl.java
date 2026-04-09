@@ -1,8 +1,11 @@
 package com.choco.smartlf.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 
+import com.choco.smartlf.entity.dto.AdminTopPageDTO;
 import com.choco.smartlf.entity.dto.ItemTopApplyDTO;
 import com.choco.smartlf.entity.pojo.ItemInfo;
 import com.choco.smartlf.entity.pojo.TopApplyRecord;
@@ -69,6 +72,24 @@ public class TopApplyRecordServiceImpl extends ServiceImpl<TopApplyRecordMapper,
         this.save(record);
         log.info("申请置顶成功，用户ID: {} 提交了物品ID: {} 的置顶申请", currentUserId, dto.getItemId());
 
+    }
+
+    @Override
+    public IPage<TopApplyRecord> pageQuery(AdminTopPageDTO dto) {
+        // 1. 创建分页对象 (当前页, 每页大小)
+        Page<TopApplyRecord> page = new Page<>(dto.getPage(), dto.getPageSize());
+
+        // 2. 构建查询条件
+        LambdaQueryWrapper<TopApplyRecord> wrapper = new LambdaQueryWrapper<>();
+
+        // 动态条件：如果前端传了状态 (0:待审核, 1:已通过, 2:已拒绝)，则加上该条件过滤
+        wrapper.eq(dto.getStatus() != null, TopApplyRecord::getStatus, dto.getStatus());
+
+        // 排序规则：按申请时间倒序排列（最新的申请排在最前面）
+        wrapper.orderByDesc(TopApplyRecord::getCreateTime);
+
+        // 3. 执行查询并返回结果
+        return this.page(page, wrapper);
     }
 }
 
