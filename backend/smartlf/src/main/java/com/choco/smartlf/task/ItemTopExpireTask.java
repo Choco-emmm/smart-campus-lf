@@ -24,6 +24,7 @@ public class ItemTopExpireTask {
      */
     @Scheduled(fixedRate = 60000)
     public void expireTopItems() {
+        log.info("定时任务触发：开始扫描过期的置顶帖子...");
         // 构造更新条件：目前是置顶状态 (is_top = 1)，且过期时间早于当前时间
         LambdaUpdateWrapper<ItemInfo> updateWrapper = new LambdaUpdateWrapper<>();
         updateWrapper.eq(ItemInfo::getIsTop, TopEnum.YES.getCode())

@@ -18,4 +18,5 @@ public class AdminUserPageDTO {
 
     @Schema(description = "账号状态 (0-正常, 1-封禁)，不传则查全部")
     private Integer status;
+
 }

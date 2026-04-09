@@ -5,6 +5,7 @@ import com.choco.smartlf.entity.Result;
 import com.choco.smartlf.entity.dto.*;
 import com.choco.smartlf.entity.pojo.ReportRecord;
 import com.choco.smartlf.entity.pojo.TopApplyRecord;
+import com.choco.smartlf.entity.pojo.User;
 import com.choco.smartlf.entity.vo.AdminReportDetailVO;
 import com.choco.smartlf.entity.vo.AdminStatsVO;
 // 注意根据你的实际包路径导入对应的 Service
@@ -117,13 +118,12 @@ public class AdminController {
         return Result.success(vo);
     }
 
-//    @Operation(summary = "分页查询用户列表", description = "支持按关键字搜索和按状态筛选")
-//    @PostMapping("/user/page")
-//    public Result<IPage<User>> pageUser(@Validated @RequestBody AdminUserPageDTO dto) {
-//        // TODO: 明天在 userService 里用 MyBatis-Plus 的 LambdaQueryWrapper 写个带 like 和 eq 的条件查询
-//        IPage<User> page = userService.pageQueryUser(dto);
-//        return Result.success(page);
-//    }
+    @Operation(summary = "分页查询用户列表", description = "支持按关键字搜索和按状态筛选")
+    @PostMapping("/user/page")
+    public Result<IPage<User>> pageUser(@Validated @RequestBody AdminUserPageDTO dto) {
+        IPage<User> page = userService.pageQueryUser(dto);
+        return Result.success(page);
+    }
 //
 //    @Operation(summary = "查看用户详情", description = "点击列表详情按钮时调用，获取包含违规次数等敏感数据")
 //    @GetMapping("/user/{userId}")

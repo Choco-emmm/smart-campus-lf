@@ -1,9 +1,7 @@
 package com.choco.smartlf.service;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.choco.smartlf.entity.dto.UpdatePasswordDTO;
-import com.choco.smartlf.entity.dto.UserLoginDTO;
-import com.choco.smartlf.entity.dto.UserRegisterDTO;
-import com.choco.smartlf.entity.dto.UserUpdateDTO;
+import com.choco.smartlf.entity.dto.*;
 import com.choco.smartlf.entity.pojo.User;
 import com.choco.smartlf.entity.vo.AdminUserInfoVO;
 import com.choco.smartlf.entity.vo.UserInfoVO;
@@ -35,4 +33,6 @@ public interface UserService extends IService<User> {
     String updateAvatar(Long userId, MultipartFile file);
 
     AdminUserInfoVO getUserDetailByAdmin(Long userId);
+
+    IPage<User> pageQueryUser(AdminUserPageDTO dto);
 }

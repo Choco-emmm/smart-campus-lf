@@ -5,11 +5,10 @@ import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.digest.BCrypt;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.choco.smartlf.entity.dto.UpdatePasswordDTO;
-import com.choco.smartlf.entity.dto.UserLoginDTO;
-import com.choco.smartlf.entity.dto.UserRegisterDTO;
-import com.choco.smartlf.entity.dto.UserUpdateDTO;
+import com.choco.smartlf.entity.dto.*;
 import com.choco.smartlf.entity.pojo.ItemInfo;
 import com.choco.smartlf.entity.pojo.User;
 import com.choco.smartlf.entity.vo.AdminUserInfoVO;
@@ -286,6 +285,36 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 
         log.info("管理员查询用户档案成功，用户ID: {}, 违规次数: {}", userId, violationCount);
         return vo;
+    }
+
+    @Override
+    public IPage<User> pageQueryUser(AdminUserPageDTO dto) {
+        // 1. 创建分页对象
+        Page<User> page = new Page<>(dto.getPage(), dto.getPageSize());
+
+        // 2. 构建查询条件
+        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+
+        //管理员查不到管理员
+        wrapper.ne(User::getRole, RoleEnum.ADMIN.getCode());
+
+        // 动态条件 1：按状态精确筛选 (如果传了的话)
+        wrapper.eq(dto.getStatus() != null, User::getStatus, dto.getStatus());
+
+        // 动态条件 2：按关键字模糊搜索 (嵌套 OR)
+        if (StrUtil.isNotBlank(dto.getKeyword())) {
+            wrapper.and(w -> w.like(User::getUsername, dto.getKeyword())
+                    .or()
+                    .like(User::getNickname, dto.getKeyword())
+                    .or()
+                    .like(User::getPhone, dto.getKeyword()));
+        }
+
+        // 3. 排序：通常按注册时间倒序排列，新注册的用户在最前面
+        wrapper.orderByDesc(User::getCreateTime);
+
+        // 4. 执行查询并返回结果
+        return this.page(page, wrapper);
     }
 
     // --- 私有辅助方法 ---
