@@ -14,6 +14,7 @@ import com.choco.smartlf.entity.pojo.User;
 import com.choco.smartlf.entity.vo.AdminUserInfoVO;
 import com.choco.smartlf.entity.vo.UserInfoVO;
 import com.choco.smartlf.entity.vo.UserLoginVO;
+import com.choco.smartlf.entity.vo.UserProfileVO;
 import com.choco.smartlf.enums.*;
 import com.choco.smartlf.exception.BusinessException;
 import com.choco.smartlf.mapper.ItemInfoMapper;
@@ -376,6 +377,24 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 
         log.info("用户状态修改成功，目标ID: {}, 新状态: {}", userId, status);
 
+    }
+
+    @Override
+    public UserProfileVO getUserProfile(Long userId) {
+        // 1. 查出用户
+        User user = this.getById(userId);
+
+        // 2. 如果ID错了或被逻辑删除了
+        if (user == null) {
+            throw new BusinessException("该用户不存在或已注销");
+        }
+
+        // 3. 数据转换（这里只会把 User 和 UserProfileVO 中名字相同的字段拷过去，完美过滤掉了密码、手机号等敏感字段）
+        UserProfileVO vo = new UserProfileVO();
+        BeanUtil.copyProperties(user, vo);
+
+        log.info("用户请求查看他人主页，目标ID: {}", userId);
+        return vo;
     }
 
     // --- 私有辅助方法 ---

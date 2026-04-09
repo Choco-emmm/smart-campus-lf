@@ -8,12 +8,14 @@ import com.choco.smartlf.entity.Result;
 import com.choco.smartlf.entity.dto.UserUpdateDTO;
 import com.choco.smartlf.entity.vo.UserInfoVO;
 import com.choco.smartlf.entity.vo.UserLoginVO;
+import com.choco.smartlf.entity.vo.UserProfileVO;
 import com.choco.smartlf.enums.CheckType;
 import com.choco.smartlf.enums.ResultCodeEnum;
 import com.choco.smartlf.exception.BusinessException;
 import com.choco.smartlf.service.UserService;
 import com.choco.smartlf.utils.UserContext;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.headers.Header;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -23,6 +25,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import javax.validation.constraints.NotNull;
 
 import static jakarta.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
 
@@ -119,5 +123,14 @@ public class UserController {
         // 返回新的头像访问URL
         String avatarUrl = userService.updateAvatar(userId, file);
         return Result.success(avatarUrl);
+    }
+
+    @Operation(summary = "查看他人公开主页", description = "获取脱敏后的用户基础信息，帖子广场点击昵称或帖子详情点击昵称/头像跳转使用")
+    @GetMapping("/profile/{userId}")
+    public Result<UserProfileVO> getUserProfile(
+            @Parameter(description = "目标用户ID") @PathVariable @NotNull Long userId) {
+
+        UserProfileVO vo = userService.getUserProfile(userId);
+        return Result.success(vo);
     }
 }

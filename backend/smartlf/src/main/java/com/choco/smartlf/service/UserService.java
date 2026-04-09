@@ -6,6 +6,7 @@ import com.choco.smartlf.entity.pojo.User;
 import com.choco.smartlf.entity.vo.AdminUserInfoVO;
 import com.choco.smartlf.entity.vo.UserInfoVO;
 import com.choco.smartlf.entity.vo.UserLoginVO;
+import com.choco.smartlf.entity.vo.UserProfileVO;
 import com.choco.smartlf.enums.CheckType;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -37,4 +38,6 @@ public interface UserService extends IService<User> {
     IPage<User> pageQueryUserByAdmin(AdminUserPageDTO dto);
 
     void updateUserStatusByAdmin(Long userId, Integer status);
+
+    UserProfileVO getUserProfile(Long userId);
 }
