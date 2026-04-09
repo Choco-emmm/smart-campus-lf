@@ -80,15 +80,14 @@ public class AdminController {
         IPage<TopApplyRecord> page = topApplyRecordService.pageQuery(dto);
         return Result.success(page);
     }
-//
-//    @Operation(summary = "审批置顶申请 (联动主表)", description = "同意后自动将 ItemInfo 设为置顶，并计算过期时间")
-//    @PutMapping("/top-apply/resolve")
-//    public Result<Void> resolveTopApply(@Validated @RequestBody AdminTopResolveDTO dto) {
-//        // TODO: 明天在 topApplyRecordService 写一个带有 @Transactional 的方法处理置顶联动
-//        topApplyRecordService.resolveTopApply(dto);
-//        return Result.success();
-//    }
-//
+
+    @Operation(summary = "审批置顶申请 (联动主表)", description = "同意后自动将 ItemInfo 设为置顶，并计算过期时间")
+    @PutMapping("/top-apply/resolve")
+    public Result<Void> resolveTopApply(@Validated @RequestBody AdminTopResolveDTO dto) {
+        topApplyRecordService.resolveTopApply(dto);
+        return Result.success();
+    }
+
 //    // ================== 4. 紧急治理 (一键封禁) ==================
 //
 //    @Operation(summary = "一键违规下架失物贴", description = "不走举报，管理员直接强制下架")

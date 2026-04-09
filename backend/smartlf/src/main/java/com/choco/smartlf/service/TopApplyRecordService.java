@@ -2,6 +2,7 @@ package com.choco.smartlf.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.choco.smartlf.entity.dto.AdminTopPageDTO;
+import com.choco.smartlf.entity.dto.AdminTopResolveDTO;
 import com.choco.smartlf.entity.dto.ItemTopApplyDTO;
 import com.choco.smartlf.entity.pojo.TopApplyRecord;
 import com.baomidou.mybatisplus.extension.service.IService;
@@ -16,4 +17,6 @@ public interface TopApplyRecordService extends IService<TopApplyRecord> {
     void applyTop(ItemTopApplyDTO dto);
 
     IPage<TopApplyRecord> pageQuery(AdminTopPageDTO dto);
+
+    void resolveTopApply(AdminTopResolveDTO dto);
 }
