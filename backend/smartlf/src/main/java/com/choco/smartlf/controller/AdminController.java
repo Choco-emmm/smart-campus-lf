@@ -51,13 +51,12 @@ public class AdminController {
 //
 //    // ================== 2. 举报审核闭环 ==================
 //
-//    @Operation(summary = "分页查询举报列表")
-//    @PostMapping("/report/page")
-//    public Result<IPage<ReportRecord>> pageReport(@Validated @RequestBody AdminReportPageDTO dto) {
-//        // TODO: 明天在 reportRecordService 实现按状态分页
-//        IPage<ReportRecord> page = reportRecordService.pageQuery(dto);
-//        return Result.success(page);
-//    }
+    @Operation(summary = "分页查询举报列表",description ="支持按状态筛选，按举报时间倒序排序")
+    @PostMapping("/report/page")
+    public Result<IPage<ReportRecord>> pageReport(@Validated @RequestBody AdminReportPageDTO dto) {
+        IPage<ReportRecord> page = reportRecordService.pageQuery(dto);
+        return Result.success(page);
+    }
 //
 //    @Operation(summary = "处理举报 (联动下架)", description = "核实举报属实后，会自动将帖子修改为违规下架状态")
 //    @PutMapping("/report/resolve")

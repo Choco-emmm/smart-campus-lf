@@ -1,8 +1,12 @@
 package com.choco.smartlf.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.choco.smartlf.entity.dto.AdminReportPageDTO;
 import com.choco.smartlf.entity.dto.ItemReportDTO;
 import com.choco.smartlf.entity.pojo.ItemInfo;
 import com.choco.smartlf.entity.pojo.ReportRecord;
@@ -56,6 +60,24 @@ public class ReportRecordServiceImpl extends ServiceImpl<ReportRecordMapper, Rep
         reportRecord.setReporterId(reporterId);
         save(reportRecord);
         log.info("用户{}提交了举报，举报物品ID为{}，举报理由为{}", reporterId, dto.getItemId(), dto.getReason());
+    }
+
+    @Override
+    public IPage<ReportRecord> pageQuery(AdminReportPageDTO dto) {
+        // 1. 创建分页对象 (当前页, 每页大小)
+        IPage<ReportRecord> page = new Page<>(dto.getPage(), dto.getPageSize());
+
+        // 2. 构建查询条件
+        LambdaQueryWrapper<ReportRecord> queryWrapper = new LambdaQueryWrapper<>();
+
+        // 如果传了状态举报状态 (0:待处理, 1:已核实, 2:已驳回)，则进行过滤
+        queryWrapper.eq(dto.getStatus() != null, ReportRecord::getStatus, dto.getStatus());
+
+        // 排序，通常举报记录应该按“创建时间”倒序排列，让管理员先看到最新的举报
+        queryWrapper.orderByDesc(ReportRecord::getCreateTime);
+
+        // 3. 执行查询并返回
+        return this.page(page, queryWrapper);
     }
 }
 
