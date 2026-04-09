@@ -67,9 +67,7 @@ public class TokenInterceptor implements HandlerInterceptor {
         Integer roleCode = UserContext.getUserRole();
         RoleEnum role = RoleEnum.fromCode(roleCode);
 
-        if (path.contains("/user") && role != RoleEnum.USER) {
-            throw new BusinessException(ResultCodeEnum.FORBIDDEN);
-        } else if (path.contains("/admin") && role != RoleEnum.ADMIN) {
+        if (path.contains("/admin") && role != RoleEnum.ADMIN) {
             throw new BusinessException(ResultCodeEnum.FORBIDDEN);
         }
 

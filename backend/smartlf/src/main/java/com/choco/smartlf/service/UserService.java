@@ -5,6 +5,7 @@ import com.choco.smartlf.entity.dto.UserLoginDTO;
 import com.choco.smartlf.entity.dto.UserRegisterDTO;
 import com.choco.smartlf.entity.dto.UserUpdateDTO;
 import com.choco.smartlf.entity.pojo.User;
+import com.choco.smartlf.entity.vo.AdminUserInfoVO;
 import com.choco.smartlf.entity.vo.UserInfoVO;
 import com.choco.smartlf.entity.vo.UserLoginVO;
 import com.choco.smartlf.enums.CheckType;
@@ -32,4 +33,6 @@ public interface UserService extends IService<User> {
     boolean isSame(Long userId, String value);
 
     String updateAvatar(Long userId, MultipartFile file);
+
+    AdminUserInfoVO getUserDetailByAdmin(Long userId);
 }

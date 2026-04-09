@@ -110,13 +110,12 @@ public class AdminController {
 
     // ================== 5. 用户管理 ==================
 
-//    @Operation(summary = "查看用户详情 (管理员视角)", description = "获取用户基础信息，以及状态、违规次数、最后活跃时间等敏感数据")
-//    @GetMapping("/user/{userId}")
-//    public Result<AdminUserInfoVO> getUserDetail(@Parameter(description = "用户主键ID") @PathVariable Long userId) {
-//        // TODO: 明天在 userService 里实现这个聚合查询方法
-//        AdminUserInfoVO vo = userService.getUserDetailByAdmin(userId);
-//        return Result.success(vo);
-//    }
+    @Operation(summary = "查看用户详情 (管理员视角)", description = "获取用户基础信息，以及状态、违规次数、最后活跃时间等敏感数据")
+    @GetMapping("/user/{userId}")
+    public Result<AdminUserInfoVO> getUserDetail(@Parameter(description = "用户主键ID") @PathVariable Long userId) {
+        AdminUserInfoVO vo = userService.getUserDetailByAdmin(userId);
+        return Result.success(vo);
+    }
 
 //    @Operation(summary = "分页查询用户列表", description = "支持按关键字搜索和按状态筛选")
 //    @PostMapping("/user/page")

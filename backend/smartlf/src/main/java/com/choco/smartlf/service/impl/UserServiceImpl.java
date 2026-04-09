@@ -10,14 +10,14 @@ import com.choco.smartlf.entity.dto.UpdatePasswordDTO;
 import com.choco.smartlf.entity.dto.UserLoginDTO;
 import com.choco.smartlf.entity.dto.UserRegisterDTO;
 import com.choco.smartlf.entity.dto.UserUpdateDTO;
+import com.choco.smartlf.entity.pojo.ItemInfo;
 import com.choco.smartlf.entity.pojo.User;
+import com.choco.smartlf.entity.vo.AdminUserInfoVO;
 import com.choco.smartlf.entity.vo.UserInfoVO;
 import com.choco.smartlf.entity.vo.UserLoginVO;
-import com.choco.smartlf.enums.CheckType;
-import com.choco.smartlf.enums.ResultCodeEnum;
-import com.choco.smartlf.enums.RoleEnum;
-import com.choco.smartlf.enums.UserStatusEnum;
+import com.choco.smartlf.enums.*;
 import com.choco.smartlf.exception.BusinessException;
+import com.choco.smartlf.mapper.ItemInfoMapper;
 import com.choco.smartlf.mapper.UserMapper;
 import com.choco.smartlf.service.UserService;
 import com.choco.smartlf.utils.Constant;
@@ -32,7 +32,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -54,8 +53,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     @Value("${system.file-prefix:D:/lfFile/}")
     private String filePrefix;
 
-    private final UserMapper userMapper;
     private final StringRedisTemplate redisTemplate;
+    // 注入 Mapper 而不是 Service，避开循环依赖死局
+    private final ItemInfoMapper itemInfoMapper;
+
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -97,7 +98,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         log.info("用户尝试登录，账号: {}", dto.getAccount());
 
         // 根据传来的账号查询用户
-        User user = userMapper.selectOne(getUserLambdaQueryWrapper(dto.getAccount()));
+        User user = this.getOne(getUserLambdaQueryWrapper(dto.getAccount()));
 
         // 查不到用户或者密码对不上
         if (user == null || !BCrypt.checkpw(dto.getPassword(), user.getPassword())) {
@@ -261,6 +262,30 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         log.info("头像更新成功，用户ID: {}, 访问路径: {}", userId, accessUrl);
 
         return accessUrl;
+    }
+
+    @Override
+    public AdminUserInfoVO getUserDetailByAdmin(Long userId) {
+        // 1. 查出用户基础信息
+        User user = this.getById(userId);
+        if (user == null) {
+            throw new BusinessException("该用户不存在或已被注销");
+        }
+
+        // 2. 转换基础数据
+        AdminUserInfoVO vo = new AdminUserInfoVO();
+        BeanUtil.copyProperties(user, vo);
+
+        // 3. 动态统计：违规发帖次数 (查询 item_info 表中，该用户 status = 3 的帖子数量)
+        long violationCount = itemInfoMapper.selectCount(
+                new LambdaQueryWrapper<ItemInfo>()
+                        .eq(ItemInfo::getUserId, userId)
+                        .eq(ItemInfo::getStatus, ItemStatusEnum.BANNED.getCode())
+        );
+        vo.setViolationCount((int) violationCount);
+
+        log.info("管理员查询用户档案成功，用户ID: {}, 违规次数: {}", userId, violationCount);
+        return vo;
     }
 
     // --- 私有辅助方法 ---
