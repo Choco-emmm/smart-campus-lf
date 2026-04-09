@@ -91,26 +91,14 @@ public class AdminController {
         return Result.success();
     }
 
-//    // ================== 4. 紧急治理 (一键封禁) ==================
-//
-//    @Operation(summary = "一键违规下架失物贴", description = "不走举报，管理员直接强制下架")
-//    @PutMapping("/item/ban/{itemId}")
-//    public Result<Void> banItem(@Parameter(description = "物品主键ID") @PathVariable Long itemId) {
-//        // TODO: 直接把 item_info 的 status 改为 3
-//        itemInfoService.banItemByAdmin(itemId);
-//        return Result.success();
-//    }
-//
-//    @Operation(summary = "封禁/解封用户账号", description = "封禁后该用户无法发帖/登录")
-//    @PutMapping("/user/status/{userId}")
-//    public Result<Void> updateUserStatus(
-//            @Parameter(description = "用户主键ID") @PathVariable Long userId,
-//            @Parameter(description = "状态 (0:正常, 1:封禁)") @RequestParam Integer status) {
-//        // TODO: 修改 user 表的 status 字段
-//        userService.updateStatusByAdmin(userId, status);
-//        return Result.success();
-//    }
+    // ================== 4. 紧急治理 (一键封禁) ==================
 
+    @Operation(summary = "一键违规下架失物贴", description = "不走举报，管理员直接强制下架")
+    @PutMapping("/item/ban/{itemId}")
+    public Result<Void> banItem(@Parameter(description = "物品主键ID") @PathVariable @NotNull Long itemId) {
+        itemInfoService.banItemByAdmin(itemId);
+        return Result.success();
+    }
     // ================== 5. 用户管理 ==================
 
     @Operation(summary = "查看用户详情 (管理员视角)", description = "获取用户基础信息，以及状态、违规次数、最后活跃时间等敏感数据")

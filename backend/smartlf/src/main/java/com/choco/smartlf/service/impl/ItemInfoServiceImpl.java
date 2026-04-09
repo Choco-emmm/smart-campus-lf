@@ -393,6 +393,21 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
             return vo;
         });
     }
+
+    @Override
+    public void banItemByAdmin(Long itemId) {
+        // 1. 获取失物信息
+        ItemInfo item = this.getById(itemId);
+        if (item == null) {
+            throw new BusinessException("该失物信息不存在");
+        }
+        if (item.getStatus().equals(ItemStatusEnum.BANNED.getCode())) {
+            throw new BusinessException("该失物信息已违规下架，请勿重复封禁");
+        }
+        item.setStatus(ItemStatusEnum.BANNED.getCode());
+        updateById(item);
+        log.info("物品ID {} 已被封禁", item.getId());
+    }
 }
 
 
