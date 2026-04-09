@@ -6,12 +6,14 @@ import lombok.Data;
 @Data
 @Schema(description = "管理员-举报单详情")
 public class AdminReportDetailVO {
-
     @Schema(description = "举报单ID")
     private Long reportId;
 
     @Schema(description = "举报理由")
     private String reason;
+
+    @Schema(description = "举报人ID (供前端做跳转超链接使用)")
+    private Long reporterId;
 
     @Schema(description = "举报人昵称")
     private String reporterNickname;

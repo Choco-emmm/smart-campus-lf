@@ -5,6 +5,7 @@ import com.choco.smartlf.entity.Result;
 import com.choco.smartlf.entity.dto.*;
 import com.choco.smartlf.entity.pojo.ReportRecord;
 import com.choco.smartlf.entity.pojo.TopApplyRecord;
+import com.choco.smartlf.entity.vo.AdminReportDetailVO;
 import com.choco.smartlf.entity.vo.AdminStatsVO;
 // 注意根据你的实际包路径导入对应的 Service
 import com.choco.smartlf.entity.vo.AdminUserInfoVO;
@@ -57,7 +58,12 @@ public class AdminController {
         IPage<ReportRecord> page = reportRecordService.pageQuery(dto);
         return Result.success(page);
     }
-
+    @Operation(summary = "查看举报单详情", description = "包含举报人、理由及原帖跳转所需ID加举报人的ID和昵称")
+    @GetMapping("/report/{reportId}")
+    public Result<AdminReportDetailVO> getReportDetail(@Parameter(description = "举报单ID") @PathVariable Long reportId) {
+        AdminReportDetailVO vo = reportRecordService.getReportDetail(reportId);
+        return Result.success(vo);
+    }
 
     @Operation(summary = "处理举报 (联动下架)", description = "核实举报属实后，会自动将帖子修改为违规下架状态，同时取消可能的置顶状态")
     @PutMapping("/report/resolve")

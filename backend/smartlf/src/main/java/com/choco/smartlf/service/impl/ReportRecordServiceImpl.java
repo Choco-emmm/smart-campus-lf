@@ -11,13 +11,17 @@ import com.choco.smartlf.entity.dto.AdminReportResolveDTO;
 import com.choco.smartlf.entity.dto.ItemReportDTO;
 import com.choco.smartlf.entity.pojo.ItemInfo;
 import com.choco.smartlf.entity.pojo.ReportRecord;
+import com.choco.smartlf.entity.pojo.User;
+import com.choco.smartlf.entity.vo.AdminReportDetailVO;
 import com.choco.smartlf.enums.AdminAuditActionEnum;
 import com.choco.smartlf.enums.ItemStatusEnum;
 import com.choco.smartlf.enums.ReportRecordEnum;
 import com.choco.smartlf.enums.TopEnum;
 import com.choco.smartlf.exception.BusinessException;
 import com.choco.smartlf.mapper.ReportRecordMapper;
+import com.choco.smartlf.service.ItemInfoService;
 import com.choco.smartlf.service.ReportRecordService;
+import com.choco.smartlf.service.UserService;
 import com.choco.smartlf.utils.UserContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,7 +39,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class ReportRecordServiceImpl extends ServiceImpl<ReportRecordMapper, ReportRecord>
     implements ReportRecordService {
 
-    private final ItemInfoServiceImpl itemInfoService;
+    private final ItemInfoService itemInfoService;
+    private final UserService userService;
 
     @Override
     public void submitReport(ItemReportDTO dto) {
@@ -138,6 +143,32 @@ public class ReportRecordServiceImpl extends ServiceImpl<ReportRecordMapper, Rep
         this.updateById(report);
 
         log.info("管理员处理举报成功，举报单ID: {}, 处理动作: {}", dto.getReportId(), dto.getAction());
+    }
+
+    @Override
+    public AdminReportDetailVO getReportDetail(Long reportId) {
+        // 1. 查出举报单
+        ReportRecord report = this.getById(reportId);
+        if (report == null) {
+            throw new BusinessException("该举报记录不存在");
+        }
+
+        AdminReportDetailVO vo = new AdminReportDetailVO();
+        vo.setReportId(report.getId());
+        vo.setReason(report.getReason());
+        vo.setItemId(report.getItemId());
+        // 直接从举报记录里拿到举报人 ID
+        vo.setReporterId(report.getReporterId());
+
+        // 2. 查举报人昵称
+        User reporter = userService.getById(report.getReporterId());
+        vo.setReporterNickname(reporter != null ? reporter.getNickname() : "已注销用户");
+
+        // 3. 查原帖题目
+        ItemInfo item = itemInfoService.getById(report.getItemId());
+        vo.setItemTitle(item != null ? item.getPublicDesc() : "【原帖已被删除】");
+
+        return vo;
     }
 }
 

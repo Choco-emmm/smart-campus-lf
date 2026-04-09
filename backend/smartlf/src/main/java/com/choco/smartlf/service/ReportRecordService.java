@@ -6,6 +6,7 @@ import com.choco.smartlf.entity.dto.AdminReportPageDTO;
 import com.choco.smartlf.entity.dto.AdminReportResolveDTO;
 import com.choco.smartlf.entity.dto.ItemReportDTO;
 import com.choco.smartlf.entity.pojo.ReportRecord;
+import com.choco.smartlf.entity.vo.AdminReportDetailVO;
 
 /**
 * @author renpe
@@ -19,4 +20,6 @@ public interface ReportRecordService extends IService<ReportRecord> {
     IPage<ReportRecord> pageQuery(AdminReportPageDTO dto);
 
     void resolveReport(AdminReportResolveDTO dto);
+
+    AdminReportDetailVO getReportDetail(Long reportId);
 }
