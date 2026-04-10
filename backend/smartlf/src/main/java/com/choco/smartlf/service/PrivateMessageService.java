@@ -1,5 +1,6 @@
 package com.choco.smartlf.service;
 
+import com.choco.smartlf.entity.dto.MessageSendDTO;
 import com.choco.smartlf.entity.pojo.PrivateMessage;
 import com.baomidou.mybatisplus.extension.service.IService;
 
@@ -10,4 +11,5 @@ import com.baomidou.mybatisplus.extension.service.IService;
 */
 public interface PrivateMessageService extends IService<PrivateMessage> {
 
+    void sendMessage(MessageSendDTO dto);
 }
