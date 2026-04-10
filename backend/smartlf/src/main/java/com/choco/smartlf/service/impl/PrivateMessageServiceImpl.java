@@ -141,7 +141,7 @@ public class PrivateMessageServiceImpl extends ServiceImpl<PrivateMessageMapper,
                         vo.setTargetAvatar(targetUser.getAvatarUrl());
                     } else {
                         vo.setTargetNickname("已注销用户");
-                        vo.setTargetAvatar("default_avatar.png"); // 默认头像
+                        //todo 默认null了，前端自己弄头像吧
                     }
 
                     return vo;
