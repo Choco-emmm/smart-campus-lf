@@ -40,4 +40,6 @@ public interface ItemInfoService extends IService<ItemInfo> {
     void banItemByAdmin(Long itemId);
 
     AdminItemDetailVO getItemDetailByAdmin(Long itemId);
+
+    String generateAIDesc(Long itemId);
 }

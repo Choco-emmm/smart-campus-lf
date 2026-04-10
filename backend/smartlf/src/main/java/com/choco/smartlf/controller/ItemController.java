@@ -16,8 +16,6 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.List;
-
 @Tag(name = "02. 失物招领模块", description = "处理物品的发布、查询、详情展示")
 @RequiredArgsConstructor
 @RestController
@@ -108,6 +106,13 @@ public class ItemController {
 
         IPage<ItemListVO> pageResult = itemInfoService.myPublishPage(pageNum, pageSize);
         return Result.success(pageResult);
+    }
+
+    @Operation(summary = "AI 一键生成/润色物品描述", description = "多次调用会覆盖上一次的AI生成结果")
+    @PostMapping("/ai/generate-desc/{itemId}")
+    public Result<String> generateAiDesc(@PathVariable Long itemId) {
+        String aiDesc = itemInfoService.generateAIDesc(itemId);
+        return Result.success(aiDesc);
     }
 
 }

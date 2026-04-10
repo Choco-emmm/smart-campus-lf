@@ -16,25 +16,26 @@ import com.choco.smartlf.entity.vo.AdminItemDetailVO;
 import com.choco.smartlf.entity.vo.AdminStatsVO;
 import com.choco.smartlf.entity.vo.ItemDetailVO;
 import com.choco.smartlf.entity.vo.ItemListVO;
-import com.choco.smartlf.enums.DeletedEnum;
-import com.choco.smartlf.enums.ItemStatusEnum;
-import com.choco.smartlf.enums.ResultCodeEnum;
-import com.choco.smartlf.enums.TopEnum;
+import com.choco.smartlf.enums.*;
 import com.choco.smartlf.exception.BusinessException;
 import com.choco.smartlf.mapper.ItemInfoMapper;
 import com.choco.smartlf.service.*;
+import com.choco.smartlf.utils.AIConstant;
 import com.choco.smartlf.utils.ImageNameUtil;
 import com.choco.smartlf.utils.UserContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import reactor.core.publisher.Flux;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * @author renpe
@@ -55,7 +56,7 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
     private final UserService userService;
     private final UserActiveLogService userActiveLogService;
     private final ItemInfoMapper itemInfoMapper;
-
+    private final ChatClient polishClient;
     @Transactional(rollbackFor = Exception.class)
     @Override
     public void publishItem(ItemPublishDTO dto) {
@@ -413,6 +414,50 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
 
         log.info("管理员查询详情成功，物品ID: {}", id);
         return adminVo;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public String generateAIDesc(Long itemId) {
+        Long currentUserId = UserContext.getUserId();
+
+        // 1. 校验物品和权限
+        ItemInfo item = this.getById(itemId);
+        if (item == null) {
+            throw new BusinessException("物品不存在");
+        }
+        if (!item.getUserId().equals(currentUserId)) {
+            throw new BusinessException(ResultCodeEnum.FORBIDDEN, "只能让AI润色自己的帖子！");
+        }
+
+        // 2. 构建给 AI 的提示词 (Prompt)
+        String typeStr = Objects.equals(item.getType(), ItemTypeEnum.LOST.getCode()) ?ItemTypeEnum.LOST.getDescription() : ItemTypeEnum.FOUND.getDescription();
+        String promptText = String.format(
+                AIConstant.PROMPT_TEMPLATE_POLISH,
+                typeStr, item.getItemName(), item.getLocation(), item.getPublicDesc()
+        );
+
+        log.info("开始调用本地大模型生成描述...");
+
+        // 🌟 3. 调用 Spring AI 生成结果
+        String aiResult = polishClient.prompt()
+                .user(promptText)
+                .call()
+                .content();
+
+        if (StrUtil.isBlank(aiResult)) {
+            throw new BusinessException("AI 生成失败，大模型没有返回内容");
+        }
+
+        // 4. 持久化到数据库 (覆盖旧结果)
+        ItemDetail itemDetail = itemDetailService.getById(itemId);
+        if (itemDetail != null) {
+            itemDetail.setAiGeneratedDesc(aiResult);
+            itemDetailService.updateById(itemDetail);
+        }
+
+        log.info("AI 描述生成并保存成功，物品ID: {}", itemId);
+        return aiResult;
     }
 
     private ItemDetailVO buildBaseItemDetailVO(ItemInfo itemInfo) {
