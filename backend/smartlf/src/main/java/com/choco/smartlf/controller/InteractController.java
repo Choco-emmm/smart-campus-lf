@@ -67,4 +67,10 @@ public class InteractController {
         List<ItemCommentNotificationVO> list = itemCommentService.getCommentNotifications();
         return Result.success(list);
     }
+    @Operation(summary = "获取私信提醒", description = "返回未读私信总数")
+    @GetMapping("/message/notifications")
+    public Result<Integer> getPrivateMessageNotifications() {
+        Integer unreadCount = privateMessageService.getPrivateMessageNotifications();
+        return Result.success(unreadCount);
+    }
 }

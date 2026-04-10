@@ -6,7 +6,6 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.choco.smartlf.entity.dto.MessageSendDTO;
-import com.choco.smartlf.entity.pojo.ItemComment;
 import com.choco.smartlf.entity.pojo.PrivateMessage;
 import com.choco.smartlf.entity.pojo.User;
 import com.choco.smartlf.entity.vo.ChatSessionVO;
@@ -151,6 +150,15 @@ public class PrivateMessageServiceImpl extends ServiceImpl<PrivateMessageMapper,
                 .toList();
 
         return resultList;
+
+    }
+
+    @Override
+    public Integer getPrivateMessageNotifications() {
+         Long unreadCount = count(new LambdaQueryWrapper<PrivateMessage>()
+                .eq(PrivateMessage::getReceiverId, UserContext.getUserId())
+                .eq(PrivateMessage::getIsRead, ReadStatusEnum.UNREAD.getCode()));
+        return unreadCount.intValue();
 
     }
 }

@@ -19,4 +19,6 @@ public interface PrivateMessageService extends IService<PrivateMessage> {
     List<PrivateMessage> getChatHistory(Long targetUserId);
 
     List<ChatSessionVO> getSessionList();
+
+    Integer getPrivateMessageNotifications();
 }
