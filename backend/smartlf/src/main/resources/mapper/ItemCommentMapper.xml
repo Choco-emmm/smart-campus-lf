@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.choco.smartlf.mapper.ItemCommentMapper">
+
+    <resultMap id="BaseResultMap" type="com.choco.smartlf.entity.pojo.ItemComment">
+            <id property="id" column="id" />
+            <result property="itemId" column="item_id" />
+            <result property="userId" column="user_id" />
+            <result property="targetUserId" column="target_user_id" />
+            <result property="content" column="content" />
+            <result property="isRead" column="is_read" />
+            <result property="createTime" column="create_time" />
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,item_id,user_id,target_user_id,content,is_read,
+        create_time
+    </sql>
+</mapper>
