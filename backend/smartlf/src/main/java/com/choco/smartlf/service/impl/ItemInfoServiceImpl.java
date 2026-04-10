@@ -81,10 +81,10 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
         log.info("itemDetail: {}", itemDetail);
 
 
-        if (StrUtil.isNotBlank(dto.getVerifyAnswer()) || StrUtil.isNotBlank(dto.getPrivateContact())) {
-            // 兜底校验：如果填了暗号没填联系方式，或者填了联系方式没填暗号，都要拦截
-            if (StrUtil.isBlank(dto.getVerifyAnswer()) || StrUtil.isBlank(dto.getPrivateContact())) {
-                throw new BusinessException("开启私密核验时，暗号与联系方式必须同时填写！");
+        if (StrUtil.isNotBlank(dto.getVerifyAnswer()) || StrUtil.isNotBlank(dto.getPrivateContact())|| StrUtil.isNotBlank(dto.getVerifyQuestion())) {
+            // 兜底校验：核验问题，核验答案，联系方式，三者要么全都没有，要么全都要填
+            if (StrUtil.isBlank(dto.getVerifyAnswer()) || StrUtil.isBlank(dto.getPrivateContact())|| StrUtil.isBlank(dto.getVerifyQuestion())) {
+                throw new BusinessException("开启私密核验时，问题、答案和联系方式必须同时填写！");
             }
             ItemSecure itemSecure = new ItemSecure();
             itemSecure.setItemId(itemId);
@@ -140,8 +140,8 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
         if (itemInfo == null) {
             throw new BusinessException("该物品信息不存在或已被删除");
         }
-        ItemDetail itemDetail = itemDetailService.getById(id);
 
+        ItemDetail itemDetail = itemDetailService.getById(id);
         //组装 VO
         ItemDetailVO vo = new ItemDetailVO();
         BeanUtil.copyProperties(itemInfo, vo);
@@ -172,7 +172,7 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
             //默认头像在前端再设置，给所有url为null的都设置
         }
 
-        log.info("物品详情查询成功，物品ID: {}", id);
+        log.info("失物信息详情查询成功，物品ID: {}", id);
         return vo;
     }
 
@@ -407,6 +407,11 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
         item.setStatus(ItemStatusEnum.BANNED.getCode());
         updateById(item);
         log.info("物品ID {} 已被封禁", item.getId());
+    }
+
+    @Override
+    public ItemDetailVO getItemDetailByAdmin(Long itemId) {
+        return null;
     }
 }
 

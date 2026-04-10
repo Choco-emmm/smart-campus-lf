@@ -37,4 +37,6 @@ public interface ItemInfoService extends IService<ItemInfo> {
     IPage<ItemListVO> myPublishPage(Integer pageNum, Integer pageSize);
 
     void banItemByAdmin(Long itemId);
+
+    ItemDetailVO getItemDetailByAdmin(Long itemId);
 }

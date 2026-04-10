@@ -3,6 +3,7 @@ package com.choco.smartlf.controller;
 import com.choco.smartlf.entity.Result;
 import com.choco.smartlf.entity.dto.CommentAddDTO;
 import com.choco.smartlf.entity.pojo.PrivateMessage;
+import com.choco.smartlf.entity.vo.ItemCommentVO;
 import com.choco.smartlf.service.ItemCommentService;
 import com.choco.smartlf.service.PrivateMessageService;
 import io.swagger.v3.oas.annotations.Operation;

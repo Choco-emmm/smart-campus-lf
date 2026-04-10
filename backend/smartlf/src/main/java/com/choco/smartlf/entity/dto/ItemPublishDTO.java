@@ -47,10 +47,13 @@ public class ItemPublishDTO {
     @Schema(description = "图片URL列表（前端上传后拿到的URL数组）")
     private List<String> imagesUrlList;
 
-    @Schema(description = "核验暗号（选填，贵重物品建议填写）")
+    @Schema(description = "核验问题（选填，贵重物品填写）")
+    private  String verifyQuestion;
+
+    @Schema(description = "核验暗号（选填，贵重物品填写）")
     private String verifyAnswer;
 
 
-    @Schema(description = "联系方式（选填，若填写暗号则此项必填）")
+    @Schema(description = "联系方式（选填，贵重物品填写）")
     private String privateContact;
 }

@@ -10,6 +10,7 @@ import com.choco.smartlf.entity.vo.AdminReportDetailVO;
 import com.choco.smartlf.entity.vo.AdminStatsVO;
 // 注意根据你的实际包路径导入对应的 Service
 import com.choco.smartlf.entity.vo.AdminUserInfoVO;
+import com.choco.smartlf.entity.vo.ItemDetailVO;
 import com.choco.smartlf.service.ItemInfoService;
 import com.choco.smartlf.service.ReportRecordService;
 import com.choco.smartlf.service.TopApplyRecordService;
@@ -54,6 +55,12 @@ public class AdminController {
     }
 
     // ================== 2. 举报审核 ==================
+    @Operation(summary = "管理员查看帖子详情 (上帝视角)", description = "无视逻辑删除和下架状态，强制查看物品底表数据，供处理举报时使用")
+    @GetMapping("/item/detail/{itemId}")
+    public Result<ItemDetailVO> getItemDetailByAdmin(@PathVariable Long itemId) {
+        ItemDetailVO detail = itemInfoService.getItemDetailByAdmin(itemId);
+        return Result.success(detail);
+    }
 
     @Operation(summary = "分页查询举报列表", description = "支持按状态/举报理由筛选，按举报时间倒序排序")
     @PostMapping("/report/page")
