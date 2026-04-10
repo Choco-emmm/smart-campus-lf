@@ -1,12 +1,15 @@
 package com.choco.smartlf.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.collection.CollUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.choco.smartlf.entity.dto.CommentAddDTO;
 import com.choco.smartlf.entity.pojo.ItemComment;
+import com.choco.smartlf.entity.pojo.ItemInfo;
 import com.choco.smartlf.entity.pojo.User;
+import com.choco.smartlf.entity.vo.ItemCommentNotificationVO;
 import com.choco.smartlf.entity.vo.ItemCommentVO;
 import com.choco.smartlf.entity.vo.ItemDetailVO;
 import com.choco.smartlf.enums.ReadStatusEnum;
@@ -21,6 +24,8 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
 * @author renpe
@@ -90,6 +95,47 @@ public class ItemCommentServiceImpl extends ServiceImpl<ItemCommentMapper, ItemC
         }
         log.info("查询到{}条留言！", list.size());
         return list;
+    }
+
+    @Override
+    public List<ItemCommentNotificationVO> getCommentNotifications() {
+        Long myId = UserContext.getUserId();
+
+        // 1. 查出所有发给我的未读留言 (is_read = 0)
+        List<ItemComment> unreadComments = this.list(new LambdaQueryWrapper<ItemComment>()
+                .eq(ItemComment::getTargetUserId, myId)
+                .eq(ItemComment::getIsRead, ReadStatusEnum.UNREAD.getCode())
+                .orderByDesc(ItemComment::getCreateTime));
+
+        if (CollUtil.isEmpty(unreadComments)) {
+            return new ArrayList<>();
+        }
+
+        // 2. 按照 itemId 进行分组。 Map<帖子ID, 该帖子的所有未读留言列表>
+        Map<Long, List<ItemComment>> groupMap = unreadComments.stream()
+                .collect(Collectors.groupingBy(ItemComment::getItemId));
+
+        // 3. 组装 VO
+        return groupMap.entrySet().stream().map(entry -> {
+            Long itemId = entry.getKey();
+            List<ItemComment> itemUnreadList = entry.getValue();
+
+            ItemCommentNotificationVO vo = new ItemCommentNotificationVO();
+            vo.setItemId(itemId);
+            vo.setUnreadCount(itemUnreadList.size());
+            // 取第一条作为最新留言摘要
+            vo.setLastCommentContent(itemUnreadList.getFirst().getContent());
+
+            // 查一下帖子的标题
+            ItemInfo item = itemInfoService.getById(itemId);
+            if (item != null) {
+                vo.setItemTitle(item.getItemName());
+            } else {
+                vo.setItemTitle("已删除的帖子");
+            }
+
+            return vo;
+        }).toList();
     }
 }
 

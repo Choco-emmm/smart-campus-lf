@@ -4,6 +4,7 @@ import com.choco.smartlf.entity.Result;
 import com.choco.smartlf.entity.dto.CommentAddDTO;
 import com.choco.smartlf.entity.dto.MessageSendDTO;
 import com.choco.smartlf.entity.pojo.PrivateMessage;
+import com.choco.smartlf.entity.vo.ItemCommentNotificationVO;
 import com.choco.smartlf.entity.vo.ItemCommentVO;
 import com.choco.smartlf.service.ItemCommentService;
 import com.choco.smartlf.service.PrivateMessageService;
@@ -50,5 +51,19 @@ public class InteractController {
     public Result<List<PrivateMessage>> getChatHistory(@PathVariable Long targetUserId) {
         List<PrivateMessage> history = privateMessageService.getChatHistory(targetUserId);
         return Result.success(history);
+    }
+
+//    @Operation(summary = "获取消息页的会话列表 (类似微信首页)")
+//    @GetMapping("/message/sessions")
+//    public Result<List<ChatSessionVO>> getSessionList() {
+//        List<ChatSessionVO> list = privateMessageService.getSessionList();
+//        return Result.success(list);
+//    }
+
+    @Operation(summary = "获取留言提醒列表", description = "返回哪些帖子有未读留言及其数量")
+    @GetMapping("/comment/notifications")
+    public Result<List<ItemCommentNotificationVO>> getCommentNotifications() {
+        List<ItemCommentNotificationVO> list = itemCommentService.getCommentNotifications();
+        return Result.success(list);
     }
 }

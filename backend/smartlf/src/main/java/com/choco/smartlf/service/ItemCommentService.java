@@ -3,6 +3,7 @@ package com.choco.smartlf.service;
 import com.choco.smartlf.entity.dto.CommentAddDTO;
 import com.choco.smartlf.entity.pojo.ItemComment;
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.choco.smartlf.entity.vo.ItemCommentNotificationVO;
 import com.choco.smartlf.entity.vo.ItemCommentVO;
 
 import java.util.List;
@@ -17,4 +18,6 @@ public interface ItemCommentService extends IService<ItemComment> {
     void addComment(CommentAddDTO dto);
 
     List<ItemCommentVO> getCommentsByItemId(Long itemId);
+
+    List<ItemCommentNotificationVO> getCommentNotifications();
 }
