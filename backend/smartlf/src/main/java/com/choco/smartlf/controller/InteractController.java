@@ -29,13 +29,13 @@ public class InteractController {
         itemCommentService.addComment(dto);
         return Result.success();
     }
-//
-//    @Operation(summary = "查看某帖子的所有留言")
-//    @GetMapping("/comment/list/{itemId}")
-//    public Result<List<ItemCommentVO>> getComments(@PathVariable Long itemId) {
-//        List<ItemCommentVO> list = itemCommentService.getCommentsByItemId(itemId);
-//        return Result.success(list);
-//    }
+
+    @Operation(summary = "查看某帖子的所有留言")
+    @GetMapping("/comment/list/{itemId}")
+    public Result<List<ItemCommentVO>> getComments(@PathVariable Long itemId) {
+        List<ItemCommentVO> list = itemCommentService.getCommentsByItemId(itemId);
+        return Result.success(list);
+    }
 //
 //    @Operation(summary = "发送私信")
 //    @PostMapping("/message/send")
