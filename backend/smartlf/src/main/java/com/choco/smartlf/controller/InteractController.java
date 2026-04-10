@@ -45,10 +45,10 @@ public class InteractController {
         return Result.success();
     }
 
-//    @Operation(summary = "获取与某人的聊天记录 (会自动将对方发给我的未读消息设为已读)")
-//    @GetMapping("/message/history/{targetUserId}")
-//    public Result<List<PrivateMessage>> getChatHistory(@PathVariable Long targetUserId) {
-//        List<PrivateMessage> history = privateMessageService.getChatHistory(targetUserId);
-//        return Result.success(history);
-//    }
+    @Operation(summary = "获取与某人的聊天记录 (会自动将对方发给我的未读消息设为已读)")
+    @GetMapping("/message/history/{targetUserId}")
+    public Result<List<PrivateMessage>> getChatHistory(@PathVariable Long targetUserId) {
+        List<PrivateMessage> history = privateMessageService.getChatHistory(targetUserId);
+        return Result.success(history);
+    }
 }
