@@ -12,6 +12,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 
 import com.choco.smartlf.entity.dto.*;
 import com.choco.smartlf.entity.pojo.*;
+import com.choco.smartlf.entity.vo.AdminItemDetailVO;
 import com.choco.smartlf.entity.vo.AdminStatsVO;
 import com.choco.smartlf.entity.vo.ItemDetailVO;
 import com.choco.smartlf.entity.vo.ItemListVO;
@@ -53,6 +54,7 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
     private final ItemSecureService itemSecureService;
     private final UserService userService;
     private final UserActiveLogService userActiveLogService;
+    private final ItemInfoMapper itemInfoMapper;
 
     @Transactional(rollbackFor = Exception.class)
     @Override
@@ -93,7 +95,7 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
             //插入核验表
             itemSecureService.save(itemSecure);
         }
-        log.info("物品发布成功，物品ID: {}", itemId);
+        log.info("失物信息发布成功，帖子ID: {}", itemId);
     }
 
     @Override
@@ -137,22 +139,7 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
     public ItemDetailVO getItemDetail(Long id) {
         //查主表和详情表
         ItemInfo itemInfo = this.getById(id);
-        if (itemInfo == null) {
-            throw new BusinessException("该物品信息不存在或已被删除");
-        }
-
-        ItemDetail itemDetail = itemDetailService.getById(id);
-        //组装 VO
-        ItemDetailVO vo = new ItemDetailVO();
-        BeanUtil.copyProperties(itemInfo, vo);
-        if (itemDetail != null) {
-            //有详情信息
-            vo.setSemiPublicDesc(itemDetail.getSemiPublicDesc());
-            if (StrUtil.isNotBlank(itemDetail.getImagesUrl())) {
-                vo.setImagesUrlList(JSONUtil.toList(itemDetail.getImagesUrl(), String.class));
-            }
-            vo.setAiGeneratedDesc(itemDetail.getAiGeneratedDesc());
-        }
+        ItemDetailVO vo = buildBaseItemDetailVO(itemInfo);
 
         //去核验表里查一下有没有这个物品的记录
         long secureCount = itemSecureService.count(
@@ -161,16 +148,6 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
 
         //如果 count > 0，说明发帖人存了暗号和联系方式，设置为 true
         vo.setHasSecureCheck(secureCount > 0);
-
-        //获取发布者信息
-        User publisher = userService.getById(itemInfo.getUserId());
-        if (publisher != null) {
-            vo.setPublisherNickname(publisher.getNickname());
-            vo.setPublisherAvatarUrl(publisher.getAvatarUrl());
-        } else {
-            vo.setPublisherNickname("用户已注销");
-            //默认头像在前端再设置，给所有url为null的都设置
-        }
 
         log.info("失物信息详情查询成功，物品ID: {}", id);
         return vo;
@@ -410,8 +387,65 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
     }
 
     @Override
-    public ItemDetailVO getItemDetailByAdmin(Long itemId) {
-        return null;
+    public AdminItemDetailVO getItemDetailByAdmin(Long id) {
+        // 使用我们上一回合手写的 Mapper，无视逻辑删除强制查出底表数据！
+        ItemInfo itemInfo = itemInfoMapper.getByIdForAdmin(id);
+        ItemDetailVO baseVo = buildBaseItemDetailVO(itemInfo);
+
+        // 将基础 VO 转换为 Admin 专属 VO
+        AdminItemDetailVO adminVo = new AdminItemDetailVO();
+        BeanUtil.copyProperties(baseVo, adminVo);
+
+        // 去核验表里把【真实的明细数据】查出来！
+        ItemSecure secure = itemSecureService.getOne(
+                new LambdaQueryWrapper<ItemSecure>().eq(ItemSecure::getItemId, id)
+        );
+
+        if (secure != null) {
+            adminVo.setHasSecureCheck(true);
+            // 塞入上帝视角的敏感数据
+            adminVo.setCheckQuestion(secure.getVerifyQuestion());
+            adminVo.setCheckAnswer(secure.getVerifyAnswer());
+            adminVo.setContactInfo(secure.getPrivateContact());
+        } else {
+            adminVo.setHasSecureCheck(false);
+        }
+
+        log.info("管理员查询详情成功，物品ID: {}", id);
+        return adminVo;
+    }
+
+    private ItemDetailVO buildBaseItemDetailVO(ItemInfo itemInfo) {
+        if (itemInfo == null) {
+            throw new BusinessException("该失物信息不存在");
+        }
+
+        Long id = itemInfo.getId();
+        ItemDetail itemDetail = itemDetailService.getById(id);
+
+        // 组装 VO
+        ItemDetailVO vo = new ItemDetailVO();
+        BeanUtil.copyProperties(itemInfo, vo);
+
+        if (itemDetail != null) {
+            // 有详情信息
+            vo.setSemiPublicDesc(itemDetail.getSemiPublicDesc());
+            if (StrUtil.isNotBlank(itemDetail.getImagesUrl())) {
+                vo.setImagesUrlList(JSONUtil.toList(itemDetail.getImagesUrl(), String.class));
+            }
+            vo.setAiGeneratedDesc(itemDetail.getAiGeneratedDesc());
+        }
+
+        // 获取发布者信息
+        User publisher = userService.getById(itemInfo.getUserId());
+        if (publisher != null) {
+            vo.setPublisherNickname(publisher.getNickname());
+            vo.setPublisherAvatarUrl(publisher.getAvatarUrl());
+        } else {
+            vo.setPublisherNickname("用户已注销");
+            // 默认头像在前端再设置
+        }
+        return vo;
     }
 }
 

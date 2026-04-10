@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.choco.smartlf.entity.dto.*;
 import com.choco.smartlf.entity.pojo.ItemInfo;
+import com.choco.smartlf.entity.vo.AdminItemDetailVO;
 import com.choco.smartlf.entity.vo.AdminStatsVO;
 import com.choco.smartlf.entity.vo.ItemDetailVO;
 import com.choco.smartlf.entity.vo.ItemListVO;
@@ -38,5 +39,5 @@ public interface ItemInfoService extends IService<ItemInfo> {
 
     void banItemByAdmin(Long itemId);
 
-    ItemDetailVO getItemDetailByAdmin(Long itemId);
+    AdminItemDetailVO getItemDetailByAdmin(Long itemId);
 }

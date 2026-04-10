@@ -55,7 +55,7 @@ public class AdminController {
     }
 
     // ================== 2. 举报审核 ==================
-    @Operation(summary = "管理员查看帖子详情 (上帝视角)", description = "无视逻辑删除和下架状态，强制查看物品底表数据，供处理举报时使用")
+    @Operation(summary = "管理员查看帖子详情 ", description = "无视逻辑删除和下架状态，强制查看物品底表数据")
     @GetMapping("/item/detail/{itemId}")
     public Result<ItemDetailVO> getItemDetailByAdmin(@PathVariable Long itemId) {
         ItemDetailVO detail = itemInfoService.getItemDetailByAdmin(itemId);
