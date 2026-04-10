@@ -16,9 +16,6 @@ public class ChatSessionVO {
     @Schema(description = "聊天对象的昵称")
     private String targetNickname;
 
-    @Schema(description = "最后一条消息的内容")
-    private String lastMessage;
-
     @Schema(description = "最后一条消息的发送时间")
     private LocalDateTime lastMessageTime;
 

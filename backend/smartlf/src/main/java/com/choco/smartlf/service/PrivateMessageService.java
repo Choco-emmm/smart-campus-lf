@@ -3,6 +3,7 @@ package com.choco.smartlf.service;
 import com.choco.smartlf.entity.dto.MessageSendDTO;
 import com.choco.smartlf.entity.pojo.PrivateMessage;
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.choco.smartlf.entity.vo.ChatSessionVO;
 
 import java.util.List;
 
@@ -16,4 +17,6 @@ public interface PrivateMessageService extends IService<PrivateMessage> {
     void sendMessage(MessageSendDTO dto);
 
     List<PrivateMessage> getChatHistory(Long targetUserId);
+
+    List<ChatSessionVO> getSessionList();
 }

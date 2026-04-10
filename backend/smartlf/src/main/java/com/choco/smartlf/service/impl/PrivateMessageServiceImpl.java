@@ -1,11 +1,15 @@
 package com.choco.smartlf.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.collection.CollUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.choco.smartlf.entity.dto.MessageSendDTO;
+import com.choco.smartlf.entity.pojo.ItemComment;
 import com.choco.smartlf.entity.pojo.PrivateMessage;
+import com.choco.smartlf.entity.pojo.User;
+import com.choco.smartlf.entity.vo.ChatSessionVO;
 import com.choco.smartlf.entity.vo.UserInfoVO;
 import com.choco.smartlf.enums.ReadStatusEnum;
 import com.choco.smartlf.service.PrivateMessageService;
@@ -16,7 +20,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
 * @author renpe
@@ -81,6 +86,72 @@ public class PrivateMessageServiceImpl extends ServiceImpl<PrivateMessageMapper,
                 myId, targetUserId, history.size());
 
         return history;
+    }
+
+    @Override
+    public List<ChatSessionVO> getSessionList() {
+        Long myId = UserContext.getUserId();
+        // 1. 获取所有和我有关的私信（按照创建时间倒序获取）
+        List<PrivateMessage> myMessages = this.list(new LambdaQueryWrapper<PrivateMessage>()
+                .eq(PrivateMessage::getSenderId, myId)
+                .or()
+                .eq(PrivateMessage::getReceiverId, myId)
+                .orderByDesc(PrivateMessage::getCreateTime));
+
+        if (CollUtil.isEmpty(myMessages)) {
+            return new ArrayList<>();
+        }
+
+        // 🌟 2. 核心修正：提取“对方的ID”并以此分组
+        // 逻辑：如果发件人是我，那对方就是收件人；如果发件人不是我，那对方就是发件人。
+        Map<Long, List<PrivateMessage>> sessionMap = myMessages.stream()
+                .collect(Collectors.groupingBy(
+                        msg -> msg.getSenderId().equals(myId) ? msg.getReceiverId() : msg.getSenderId()
+                ));
+
+        // 3. 提取所有的对方用户 ID (拿到所有的 Key)
+        Set<Long> targetUserIds = sessionMap.keySet();
+
+        // 4. 批量查询用户信息并转为 Map
+        Map<Long, User> userMap = userService.listByIds(targetUserIds).stream()
+                .collect(Collectors.toMap(User::getId, user -> user));
+
+        // 🌟 5. 终极拼装：将 消息 + 未读数 + 用户信息 组装成 VO
+        List<ChatSessionVO> resultList = sessionMap.entrySet().stream().map(entry -> {
+                    Long targetId = entry.getKey();
+                    List<PrivateMessage> chatHistory = entry.getValue(); // 这是我们俩所有的聊天记录（时间已倒序）
+
+                    ChatSessionVO vo = new ChatSessionVO();
+                    vo.setTargetUserId(targetId);
+
+                    // ① 取出最新的一条消息的发送时间（因为原本查询就是倒序，所以 List 的第 0 个绝对是最新的！）
+                    PrivateMessage lastMsg = chatHistory.getFirst();
+                    vo.setLastMessageTime(lastMsg.getCreateTime());
+
+                    // ② 统计未读数：在我们俩的记录里，接收人是我，且状态是未读的有多少条？
+                    long unreadCount = chatHistory.stream()
+                            .filter(m -> m.getReceiverId().equals(myId) && m.getIsRead().equals(ReadStatusEnum.UNREAD.getCode()))
+                            .count();
+                    vo.setUnreadCount((int) unreadCount);
+
+                    // ③ 塞入对方的用户信息
+                    User targetUser = userMap.get(targetId);
+                    if (targetUser != null) {
+                        vo.setTargetNickname(targetUser.getNickname());
+                        vo.setTargetAvatar(targetUser.getAvatarUrl());
+                    } else {
+                        vo.setTargetNickname("已注销用户");
+                        vo.setTargetAvatar("default_avatar.png"); // 默认头像
+                    }
+
+                    return vo;
+                })
+                // 🌟 6. 终极排序：把有最新消息的会话顶到最上面
+                .sorted(Comparator.comparing(ChatSessionVO::getLastMessageTime).reversed())
+                .toList();
+
+        return resultList;
+
     }
 }
 
