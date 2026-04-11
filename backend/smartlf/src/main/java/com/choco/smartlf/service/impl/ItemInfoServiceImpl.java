@@ -192,16 +192,17 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
 
         // 4. 更新核验表
         // 先看用户是不是想关闭核验模式（把暗号和联系方式都置空）
-        if (StrUtil.isBlank(dto.getVerifyAnswer()) && StrUtil.isBlank(dto.getPrivateContact())) {
+        if (StrUtil.isBlank(dto.getVerifyAnswer()) && StrUtil.isBlank(dto.getPrivateContact())&& StrUtil.isBlank(dto.getVerifyQuestion())) {
             // 用户想关闭：直接把核验记录删掉
             itemSecureService.removeById(itemId);
         } else {
-            // 用户想开启或修改：必须两者都填
-            if (StrUtil.isBlank(dto.getVerifyAnswer()) || StrUtil.isBlank(dto.getPrivateContact())) {
-                throw new BusinessException("开启私密核验时，暗号与联系方式必须同时填写！");
+            // 用户想开启或修改：必须三者都填
+            if (StrUtil.isBlank(dto.getVerifyAnswer()) || StrUtil.isBlank(dto.getPrivateContact()) || StrUtil.isBlank(dto.getVerifyQuestion())) {
+                throw new BusinessException("开启私密核验时，问题、答案与联系方式必须同时填写！");
             }
             ItemSecure itemSecure = new ItemSecure();
             itemSecure.setItemId(itemId);
+            itemSecure.setVerifyQuestion(dto.getVerifyQuestion());
             itemSecure.setVerifyAnswer(dto.getVerifyAnswer());
             itemSecure.setPrivateContact(dto.getPrivateContact());
             // 使用 saveOrUpdate：如果以前没开启就插入，开启了就更新
@@ -503,6 +504,47 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
         stringRedisTemplate.opsForValue().set(AIConstant.SUMMARY_KEY, content, AIConstant.SUMMARY_EXPIRE_DAYS, TimeUnit.DAYS);
 
         log.info("AI 本周安保报告已生成并存入 Redis！");
+    }
+
+    @Override
+    public ItemUpdateDTO getEditEcho(Long id) {
+        Long currentUserId = UserContext.getUserId();
+
+        // 1. 查主表并做严格越权校验
+        ItemInfo itemInfo = this.getById(id);
+        if (itemInfo == null) {
+            throw new BusinessException("该物品信息不存在");
+        }
+        if (!itemInfo.getUserId().equals(currentUserId)) {
+            throw new BusinessException(ResultCodeEnum.FORBIDDEN, "越权访问：你没有权限查看他人的敏感编辑信息！");
+        }
+
+        // 2. 初始化前端要的 DTO，把主表数据拷进去
+        ItemUpdateDTO dto = new ItemUpdateDTO();
+        BeanUtil.copyProperties(itemInfo, dto);
+
+        // 3. 查详情表，补充半公开细节和图片
+        ItemDetail itemDetail = itemDetailService.getById(id);
+        if (itemDetail != null) {
+            dto.setSemiPublicDesc(itemDetail.getSemiPublicDesc());
+            if (StrUtil.isNotBlank(itemDetail.getImagesUrl())) {
+                dto.setImagesUrlList(JSONUtil.toList(itemDetail.getImagesUrl(), String.class));
+            }
+        }
+
+        // 4. 🌟 最关键的一步：查核验表，把真实的问题，暗号和联系方式查出来给前端！
+        ItemSecure itemSecure = itemSecureService.getOne(
+                new LambdaQueryWrapper<ItemSecure>().eq(ItemSecure::getItemId, id)
+        );
+        if (itemSecure != null) {
+
+            dto.setVerifyAnswer(itemSecure.getVerifyAnswer());
+            dto.setPrivateContact(itemSecure.getPrivateContact());
+            dto.setVerifyQuestion(itemSecure.getVerifyQuestion());
+        }
+
+        log.info("回显数据成功，物品ID: {}, 操作人: {}", id, currentUserId);
+        return dto;
     }
 
     private ItemDetailVO buildBaseItemDetailVO(ItemInfo itemInfo) {

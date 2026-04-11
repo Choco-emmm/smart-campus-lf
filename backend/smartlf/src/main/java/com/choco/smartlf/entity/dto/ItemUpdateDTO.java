@@ -41,6 +41,9 @@ public class ItemUpdateDTO {
     @Schema(description = "图片URL列表")
     private List<String> imagesUrlList;
 
+    @Schema(description = "核验问题")
+    private String verifyQuestion;
+
     @Schema(description = "核验暗号")
     private String verifyAnswer;
 

@@ -116,4 +116,11 @@ public class ItemController {
         return Result.success(aiDesc);
     }
 
+    @Operation(summary = "获取修改帖子时的回显数据", description = "包含敏感的暗号数据，仅限发帖人调用")
+    @GetMapping("/edit-echo/{id}")
+    public Result<ItemUpdateDTO> getEditEcho(@PathVariable Long id) {
+        ItemUpdateDTO dto = itemInfoService.getEditEcho(id);
+        return Result.success(dto);
+    }
+
 }

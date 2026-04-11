@@ -44,4 +44,6 @@ public interface ItemInfoService extends IService<ItemInfo> {
     String generateAIDesc(Long itemId);
 
     void generateAdminSummary();
+
+    ItemUpdateDTO getEditEcho(Long id);
 }
