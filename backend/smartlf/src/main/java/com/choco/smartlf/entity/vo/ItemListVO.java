@@ -17,6 +17,7 @@ public class ItemListVO {
     private String location;
     @Schema(description = "帖子大标题 (前端用加粗大字体展示在封面图下方)", example = "在二饭捡到一把黑色雨伞")
     private String publicDesc;
+    private Integer role;
     private Integer status;
     private Integer isTop;
     

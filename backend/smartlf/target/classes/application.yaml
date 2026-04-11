@@ -1,6 +1,11 @@
 spring:
   application:
     name: smartlf
+  ai:
+    ollama:
+      base-url: http://localhost:11434
+      chat:
+        model: qwen3.5:4b
   data:
     # redis配置
     redis:

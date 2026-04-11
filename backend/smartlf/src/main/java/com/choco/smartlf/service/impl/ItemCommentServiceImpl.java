@@ -21,7 +21,9 @@ import com.choco.smartlf.utils.UserContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -41,24 +43,33 @@ public class ItemCommentServiceImpl extends ServiceImpl<ItemCommentMapper, ItemC
 
     private final ItemInfoService itemInfoService;
 
+    @Transactional
     @Override
     public void addComment(CommentAddDTO dto) {
         ItemComment comment = new ItemComment();
-        ItemDetailVO itemDetail = itemInfoService.getItemDetail(dto.getItemId());
+        ItemInfo iteminfo = itemInfoService.getById(dto.getItemId());
         //帖子被逻辑删除了就查不到了
-        if(!itemDetail.getId().equals(dto.getItemId())){
+        if(iteminfo==null){
             throw new RuntimeException("失物信息不存在！");
         }
-        //查帖主，将帖主id保存中（就算帖主注销也能继续留言，只要帖子还存在的话）
-        comment.setTargetUserId(itemDetail.getUserId());
+        //查帖主，将帖主id保存（就算帖主注销也能继续留言，只要帖子还存在的话）
+        comment.setTargetUserId(iteminfo.getUserId());
         comment.setItemId(dto.getItemId());// 物品ID
         comment.setUserId(UserContext.getUserId()); // 当前登录用户
         comment.setContent(dto.getContent());
+        //获取当前时间
+        LocalDateTime now = LocalDateTime.now();
+        comment.setCreateTime(now);
         //如果帖主id和当前用户id相同，则更新为已读
         if(comment.getTargetUserId().equals(UserContext.getUserId())){
             comment.setIsRead(ReadStatusEnum.READ.getCode());
         }
         this.save(comment);
+        log.info("添加留言成功！");
+        //更新帖子的顶贴时间
+        iteminfo.setLatestReplyTime(now);
+        itemInfoService.updateById(iteminfo);
+        log.info("更新帖子{}的顶贴时间成功！", iteminfo.getId());
     }
 
     @Override
@@ -79,9 +90,10 @@ public class ItemCommentServiceImpl extends ServiceImpl<ItemCommentMapper, ItemC
             BeanUtil.copyProperties(comment, vo);
             //查出留言人
             User user = userService.getById(comment.getUserId());
-            //设置留言人昵称和留言人头像
+            //设置留言人昵称、留言人头像、留言人角色
             vo.setNickname(user.getNickname());
             vo.setAvatarUrl(user.getAvatarUrl());
+            vo.setRole(user.getRole());
             list.add(vo);
         }
         //通过itemId去查发帖人id，如果与当前用户的id相同，更新帖子下所有的留言为已读

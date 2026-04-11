@@ -1,6 +1,7 @@
 package com.choco.smartlf.entity.pojo;
 
 
+import java.time.LocalDateTime;
 import java.util.Date;
 
 import com.baomidou.mybatisplus.annotation.IdType;
@@ -24,5 +25,5 @@ public class ItemComment {
     @Schema(description="帖主是否已读 (0:未读, 1:已读)")
     private Integer isRead;
     @Schema(description="留言时间")
-    private Date createTime;
+    private LocalDateTime createTime;
 }

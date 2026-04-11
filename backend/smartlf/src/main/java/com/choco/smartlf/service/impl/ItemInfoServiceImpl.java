@@ -279,8 +279,8 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
                     .like(ItemInfo::getPublicDesc, dto.getKeyword()));
         }
 
-        // 排序核心：is_top 倒序 (1 排前面)，然后按创建时间倒序
-        wrapper.orderByDesc(ItemInfo::getIsTop).orderByDesc(ItemInfo::getCreateTime);
+        // 排序核心：is_top 倒序 (1 排前面)，然后按顶贴时间倒序
+        wrapper.orderByDesc(ItemInfo::getIsTop).orderByDesc(ItemInfo::getLatestReplyTime);
 
         // 3. 执行查询
         this.page(page, wrapper);
