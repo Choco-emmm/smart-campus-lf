@@ -20,6 +20,7 @@ import com.choco.smartlf.exception.BusinessException;
 import com.choco.smartlf.mapper.ItemInfoMapper;
 import com.choco.smartlf.service.*;
 import com.choco.smartlf.utils.AIConstant;
+import com.choco.smartlf.utils.Constant;
 import com.choco.smartlf.utils.ImageNameUtil;
 import com.choco.smartlf.utils.UserContext;
 import lombok.RequiredArgsConstructor;
@@ -565,6 +566,30 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
 
         log.info("回显数据成功，物品ID: {}, 操作人: {}", id, currentUserId);
         return dto;
+    }
+
+    @Override
+    public void toggleTopByAdmin(Long itemId, Integer isTop) {
+        //查询失物信息
+        ItemInfo itemInfo = this.getById(itemId);
+        if (itemInfo == null) {
+            throw new BusinessException("该失物信息不存在");
+        }
+
+        if (isTop.equals(TopEnum.YES.getCode())) {
+            // 1. 如果 isTop == 1，将 is_top 设为 1，并设置 top_end_time（24小时）
+            itemInfo.setIsTop(TopEnum.YES.getCode());
+            itemInfo.setTopEndTime(LocalDateTime.now().plusHours(Constant.TOP_END_TIME_HOURS));
+        } else if (isTop.equals(TopEnum.NO.getCode())) {
+            // 2. 如果 isTop == 0，将 is_top 设为 0，清空 top_end_time
+            itemInfo.setIsTop(TopEnum.NO.getCode());
+        }else {
+            throw new BusinessException("参数错误");
+        }
+
+        //更新数据
+       this.updateById(itemInfo);
+        log.info("物品ID: {} 的置顶状态已更新为: {}", itemId, isTop);
     }
 
     private ItemDetailVO buildBaseItemDetailVO(ItemInfo itemInfo) {

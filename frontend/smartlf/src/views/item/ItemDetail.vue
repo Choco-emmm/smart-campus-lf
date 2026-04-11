@@ -11,7 +11,8 @@
                 <el-tag v-if="Number(detail.role) === 1" type="warning" effect="dark" class="ml-10">官方</el-tag>
                 <el-tag v-if="detail.isTop" type="warning" effect="plain" class="ml-10"><el-icon><Top /></el-icon> 置顶中</el-tag>
               </div>
-              <el-button v-if="myUserId && String(myUserId) !== String(detail.userId)" type="danger" link @click="reportDialogVisible = true">
+              
+              <el-button v-if="myUserId && String(myUserId) !== String(detail.userId) && myRole !== 1" type="danger" link @click="reportDialogVisible = true">
                 <el-icon><Warning /></el-icon> 举报
               </el-button>
             </div>
@@ -23,11 +24,21 @@
             </div>
           </div>
           <el-divider border-style="dashed" />
+          
           <div class="info-bar">
             <div class="info-item"><el-icon><PriceTag /></el-icon> 物品：{{ detail.itemName }}</div>
             <div class="info-item"><el-icon><Location /></el-icon> 地点：{{ detail.location }}</div>
           </div>
+          
           <div class="desc-content">{{ detail.semiPublicDesc || '楼主暂无详细描述' }}</div>
+
+          <div v-if="detail.aiGeneratedDesc" class="ai-desc-container">
+            <div class="ai-desc-title">
+              <el-icon><MagicStick /></el-icon> AI 智能辅助描述
+            </div>
+            <div class="markdown-body" v-html="parsedAiDesc"></div>
+          </div>
+
           <div class="image-gallery" v-if="detail.imagesUrlList?.length">
             <el-carousel trigger="click" height="400px" :autoplay="false">
               <el-carousel-item v-for="img in detail.imagesUrlList" :key="img">
@@ -63,11 +74,12 @@
       <div class="side-bar">
         <el-card class="publisher-card" shadow="never">
           <div class="publisher-info" style="text-align: center;">
-            <el-avatar :size="64" :src="getImageUrl(detail.publisherAvatarUrl)" class="pointer" @click="goToProfile(detail.userId)" />
-            <h3 class="mt-10">{{ detail.publisherNickname }}</h3>
+            <el-avatar :size="64" :src="getImageUrl(detail.avatarUrl)" class="pointer" @click="goToProfile(detail.userId)" />
+            <h3 class="mt-10 pointer" @click="goToProfile(detail.userId)">{{ detail.publisherNickname }}</h3>
           </div>
           <el-divider />
           <div class="action-group">
+            
             <div v-if="myUserId && String(myUserId) === String(detail.userId)" class="owner-actions">
               <div class="status-manage">
                 <p class="section-label">更改状态：</p>
@@ -79,10 +91,27 @@
               </div>
               <el-divider />
               <el-button type="primary" class="full-btn" @click="router.push(`/item/edit/${detail.id}`)">修改帖子</el-button>
-              <el-button v-if="!detail.isTop" type="warning" class="full-btn" @click="handleTopApply">申请置顶</el-button>
+              
+              <el-button v-if="myRole !== 1 && !detail.isTop" type="warning" class="full-btn" @click="handleTopApply">申请置顶</el-button>
+              <el-button v-if="myRole === 1" :type="detail.isTop ? 'info' : 'warning'" class="full-btn" @click="handleAdminToggleTop">
+                {{ detail.isTop ? '取消置顶' : '一键置顶' }}
+              </el-button>
+              
               <el-button type="danger" plain class="full-btn" @click="handleDelete">删除此帖</el-button>
             </div>
+            
+            <div v-else-if="myRole === 1" class="admin-actions">
+              <el-button :type="detail.isTop ? 'info' : 'warning'" class="full-btn" @click="handleAdminToggleTop">
+                {{ detail.isTop ? '取消置顶' : '一键置顶' }}
+              </el-button>
+              <el-button type="danger" class="full-btn mt-10" @click="handleAdminBan">
+                <el-icon><Remove /></el-icon> 违规下架帖子
+              </el-button>
+              <el-button type="primary" plain class="full-btn mt-10" @click="handleContact">私聊联系</el-button>
+            </div>
+
             <el-button v-else type="primary" class="full-btn" @click="handleContact">私聊联系</el-button>
+
           </div>
         </el-card>
       </div>
@@ -106,25 +135,33 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { PriceTag, Location, Warning, Top } from '@element-plus/icons-vue'
+import { PriceTag, Location, Warning, Top, Remove, MagicStick } from '@element-plus/icons-vue'
 import { getItemDetail, deleteItem, reportItem, updateItemStatus, applyItemTop } from '@/api/item'
 import { getCommentList, addComment } from '@/api/interact'
 import { getUserInfo } from '@/api/user'
+import { banItem, toggleTopByAdmin } from '@/api/admin' // 🌟 引入刚添加的一键置顶接口
+import { marked } from 'marked'
 
 const route = useRoute()
 const router = useRouter()
 const loading = ref(false)
 const detail = ref(null)
 const myUserId = ref(null)
+const myRole = ref(0)
 const commentList = ref([])
 const newComment = ref('')
 
 const reportDialogVisible = ref(false)
 const selectedReasons = ref([])
 const otherReasonText = ref('')
+
+const parsedAiDesc = computed(() => {
+  if (!detail.value || !detail.value.aiGeneratedDesc) return ''
+  return marked.parse(detail.value.aiGeneratedDesc)
+})
 
 const getStatusText = (s) => ({ 0: '寻找中', 1: '锁定中', 2: '已结案' }[s] || '未知')
 const getStatusType = (s) => s === 1 ? 'warning' : (s === 2 ? 'info' : 'primary')
@@ -141,6 +178,8 @@ const fetchData = async () => {
     detail.value = res.data
     const userRes = await getUserInfo()
     myUserId.value = userRes.data.id
+    myRole.value = userRes.data.role
+
     const commentRes = await getCommentList(route.params.id)
     commentList.value = commentRes.data || []
   } finally { loading.value = false }
@@ -158,12 +197,31 @@ const handleStatusChange = async (val) => {
   ElMessage.success('状态已更新')
 }
 
+const handleAdminBan = () => {
+  ElMessageBox.confirm('确定要强制下架该违规帖子吗？', '管理员操作', { type: 'error' }).then(async () => {
+    await banItem(detail.value.id)
+    ElMessage.success('已强制下架')
+    router.replace('/')
+  }).catch(() => {})
+}
+
+// 🌟 管理员一键置顶/取消逻辑
+const handleAdminToggleTop = async () => {
+  const targetTopStatus = detail.value.isTop ? 0 : 1
+  const actionText = targetTopStatus === 1 ? '一键置顶' : '取消置顶'
+  
+  ElMessageBox.confirm(`确定要${actionText}该帖子吗？`, '管理员操作', { type: 'warning' }).then(async () => {
+    await toggleTopByAdmin(detail.value.id, targetTopStatus)
+    ElMessage.success(`${actionText}成功`)
+    fetchData() // 刷新页面数据
+  }).catch(() => {})
+}
+
 const confirmReport = async () => {
   if (selectedReasons.value.length === 0) return ElMessage.warning('请选择原因')
   let reason = selectedReasons.value.filter(r => r !== '其他原因').join('; ')
   if (selectedReasons.value.includes('其他原因')) reason += `; 其他: ${otherReasonText.value}`
   
-  // 🌟 对接后端 DTO：itemId 和 reason
   await reportItem({ itemId: Number(route.params.id), reason: reason })
   ElMessage.success('举报成功')
   reportDialogVisible.value = false
@@ -184,13 +242,11 @@ const handleTopApply = async () => {
 const goToProfile = (id) => router.push(`/profile/${id}`)
 const handleContact = () => router.push({ path: '/message', query: { targetId: detail.value.userId, targetName: detail.value.publisherNickname } })
 const formatTime = (t) => t ? t.replace('T', ' ').substring(0, 16) : ''
-const formatTimeSmall = (t) => t ? t.replace('T', ' ').substring(5, 16) : ''
 
 onMounted(() => fetchData())
 </script>
 
 <style scoped>
-/* 保持原有样式，仅补全布局 */
 .detail-layout { display: flex; gap: 20px; max-width: 1200px; margin: 0 auto; padding: 20px; align-items: flex-start; }
 .main-content { flex: 1; min-width: 0; }
 .side-bar { width: 300px; position: sticky; top: 20px; }
@@ -198,7 +254,31 @@ onMounted(() => fetchData())
 .post-title { font-size: 26px; margin: 15px 0; color: #1d2129; }
 .info-bar { display: flex; gap: 24px; padding: 16px; background: #f7f8fa; border-radius: 8px; }
 .desc-content { font-size: 16px; line-height: 1.8; color: #4e5969; margin: 20px 0; white-space: pre-wrap; }
-.pointer { cursor: pointer; }
+
+.ai-desc-container {
+  margin: 20px 0;
+  padding: 16px 20px;
+  background: linear-gradient(to right, #f4f8ff, #f9fbff);
+  border-left: 4px solid #1e80ff;
+  border-radius: 6px;
+}
+.ai-desc-title {
+  font-weight: bold;
+  color: #1e80ff;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 15px;
+}
+
+.markdown-body :deep(p) { line-height: 1.6; color: #4e5969; margin-bottom: 8px; font-size: 15px; }
+.markdown-body :deep(ul), .markdown-body :deep(ol) { padding-left: 20px; margin-bottom: 10px; color: #4e5969; line-height: 1.6;}
+.markdown-body :deep(li) { margin-bottom: 4px; }
+.markdown-body :deep(strong) { color: #1d2129; font-weight: 600; }
+
+.pointer { cursor: pointer; transition: opacity 0.2s; }
+.pointer:hover { opacity: 0.8; }
 .mt-10 { margin-top: 10px; }
 .ml-10 { margin-left: 10px; }
 </style>

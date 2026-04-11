@@ -46,4 +46,6 @@ public interface ItemInfoService extends IService<ItemInfo> {
     void generateAdminSummary();
 
     ItemUpdateDTO getEditEcho(Long id);
+
+    void toggleTopByAdmin(Long itemId, Integer isTop);
 }

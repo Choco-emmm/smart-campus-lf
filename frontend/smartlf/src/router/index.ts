@@ -17,7 +17,22 @@ const router = createRouter({
         { path: 'item/:id', name: 'ItemDetail', component: () => import('@/views/item/ItemDetail.vue') },
         { path: 'item/edit/:id', name: 'ItemEdit', component: () => import('@/views/item/ItemEdit.vue') },
         { path: 'message', name: 'MessageCenter', component: () => import('@/views/message/MessageCenter.vue') },
-        { path: 'profile/:id', name: 'UserProfile', component: () => import('@/views/user/UserProfile.vue') }
+        { path: 'profile/:id', name: 'UserProfile', component: () => import('@/views/user/UserProfile.vue') },
+        {
+          path: 'admin/dashboard',
+          name: 'AdminDashboard',
+          component: () => import('@/views/admin/AdminDashboard.vue')
+        },
+        {
+          path: 'admin/users',
+          name: 'UserManage',
+          component: () => import('@/views/admin/UserManage.vue')
+        },
+        {
+          path: 'admin/items',
+          name: 'ItemManage',
+          component: () => import('@/views/admin/ItemManage.vue')
+        }
       ]
     }
   ],

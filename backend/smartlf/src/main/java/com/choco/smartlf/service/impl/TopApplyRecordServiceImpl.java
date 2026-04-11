@@ -19,6 +19,7 @@ import com.choco.smartlf.exception.BusinessException;
 import com.choco.smartlf.service.ItemInfoService;
 import com.choco.smartlf.service.TopApplyRecordService;
 import com.choco.smartlf.mapper.TopApplyRecordMapper;
+import com.choco.smartlf.utils.Constant;
 import com.choco.smartlf.utils.UserContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -123,7 +124,7 @@ public class TopApplyRecordServiceImpl extends ServiceImpl<TopApplyRecordMapper,
             if (item != null) {
                 item.setIsTop(TopEnum.YES.getCode());
                 // 设定过期时间：这里默认给它置顶 24小时
-                item.setTopEndTime(LocalDateTime.now().plusHours(24));
+                item.setTopEndTime(LocalDateTime.now().plusHours(Constant.TOP_END_TIME_HOURS));
 
                 itemInfoService.updateById(item);
                 log.info("置顶联动成功：物品ID {} 已置顶，将在 {} 自动过期", item.getId(), item.getTopEndTime());

@@ -33,7 +33,6 @@
             <div class="session-info">
               <div class="session-header">
                 <span class="nickname">{{ session.targetNickname }}</span>
-                <span class="time">{{ formatTimeSmall(session.lastMessageTime) }}</span>
               </div>
             </div>
           </div>
@@ -103,16 +102,15 @@
 <script setup>
 import { ref, onMounted, nextTick, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
 import { ChatDotRound, Bell, ChatSquare, ArrowRight } from '@element-plus/icons-vue'
 import { getChatSessions, getChatHistory, sendPrivateMessage, getCommentNotifications } from '@/api/interact'
-import { getUserInfo } from '@/api/user' // 🌟 引入获取个人信息
+import { getUserInfo } from '@/api/user'
 
 const route = useRoute()
 const router = useRouter()
 const activeTab = ref('chat') 
 
-const myAvatar = ref('') // 🌟 存放自己的头像地址
+const myAvatar = ref('')
 const sessionList = ref([])
 const sessionLoading = ref(false)
 const currentTargetId = ref(null)
@@ -127,7 +125,6 @@ const chatHistoryRef = ref(null)
 const noticeList = ref([])
 const noticeLoading = ref(false)
 
-// 🌟 万能图片前缀转换
 const getImageUrl = (url) => {
   if (!url) return 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
   if (url.startsWith('http')) return url
@@ -178,6 +175,35 @@ const selectSession = async (session) => {
   } finally { historyLoading.value = false }
 }
 
+// 🌟 核心：如果是其他页面跳转来的，自动选中或新建会话
+const checkQueryAndSelect = () => {
+  const { targetId, targetName, targetAvatar } = route.query
+  if (targetId) {
+    activeTab.value = 'chat'
+    const tId = Number(targetId)
+    
+    // 在现有会话中寻找
+    let session = sessionList.value.find(s => s.targetUserId === tId)
+    
+    // 如果之前没聊过，就强行创建一个临时会话放前面
+    if (!session) {
+      session = {
+        targetUserId: tId,
+        targetNickname: targetName || '新会话',
+        targetAvatar: targetAvatar || '',
+        unreadCount: 0
+      }
+      sessionList.value.unshift(session)
+    }
+    
+    // 选中该会话
+    selectSession(session)
+    
+    // 清空 URL 参数，防止刷新时再次触发
+    router.replace({ path: '/message', query: {} })
+  }
+}
+
 const sendMsg = async () => {
   if (!inputMessage.value.trim() || !currentTargetId.value) return
   sending.value = true
@@ -201,16 +227,17 @@ const fetchNotices = async () => {
 }
 
 const formatTime = (t) => t ? t.replace('T', ' ').substring(0, 16) : ''
-const formatTimeSmall = (t) => t ? t.split('T')[0].substring(5) : ''
 
 onMounted(async () => { 
-  // 🌟 初始化时获取自己的信息，用于显示气泡头像
   try {
     const res = await getUserInfo()
     myAvatar.value = res.data.avatarUrl
   } catch (e) {}
   
-  fetchSessions()
+  // 🌟 等待会话列表加载完毕，再执行选中检索
+  await fetchSessions()
+  checkQueryAndSelect() 
+  
   fetchNotices()
 })
 </script>
@@ -220,11 +247,17 @@ onMounted(async () => {
 .message-card { height: 100%; border-radius: 12px; overflow: hidden; border: none; box-shadow: 0 4px 16px rgba(0,0,0,0.05); }
 .sidebar { width: 260px; background-color: #fafafa; border-right: 1px solid #f0f0f0; }
 .side-menu { border-right: none; background: transparent; padding: 10px 0; }
-.tab-badge :deep(.el-badge__content) { top: 12px; right: -2px; } /* 🌟 修正红点位置 */
+.tab-badge :deep(.el-badge__content) { top: 12px; right: -2px; }
 .session-list { flex: 1; overflow-y: auto; }
+
+/* 🌟 修改列表项布局，使单行文字居中 */
 .session-item { display: flex; align-items: center; padding: 15px; cursor: pointer; transition: all 0.2s; }
 .session-item:hover { background-color: #f2f3f5; }
 .session-item.active { background-color: #e8f3ff; border-left: 3px solid #1e80ff; }
+.session-info { flex: 1; margin-left: 12px; overflow: hidden; }
+.session-header { display: flex; align-items: center; height: 100%; }
+.nickname { font-weight: 500; color: #1d2129; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 15px; }
+
 .main-content { flex: 1; background: #fff; overflow: hidden; }
 .chat-window { height: 100%; display: flex; flex-direction: column; }
 .chat-history { flex: 1; padding: 20px; overflow-y: auto; background-color: #f7f8fa; }

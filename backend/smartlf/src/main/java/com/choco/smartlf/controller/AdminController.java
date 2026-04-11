@@ -116,7 +116,15 @@ public class AdminController {
         return Result.success();
     }
 
-    // ================== 4. 紧急治理 (一键封禁) ==================
+    // ================== 4. 紧急治理 (一键封禁、置顶/取消置顶) ==================
+    @Operation(summary = "管理员一键置顶/取消置顶", description = "管理员专属，直接修改帖子的置顶状态，无需审核")
+    @PutMapping("/item/top/{itemId}")
+    public Result<Void> toggleTopByAdmin(
+            @Parameter(description = "物品主键ID") @PathVariable Long itemId,
+            @Parameter(description = "置顶状态 (0:取消置顶, 1:置顶)") @RequestParam Integer isTop) {
+        itemInfoService.toggleTopByAdmin(itemId, isTop);
+        return Result.success();
+    }
 
     @Operation(summary = "一键违规下架失物贴", description = "不走举报，管理员直接强制下架")
     @PutMapping("/item/ban/{itemId}")

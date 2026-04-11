@@ -9,6 +9,7 @@
           <h2 class="nickname">
             {{ profile.nickname }}
             <el-tag size="small" type="warning" effect="dark" v-if="Number(profile.role) === 1" class="ml-10">管理员</el-tag>
+            <el-tag size="small" type="danger" effect="dark" v-if="profile.status === 1" class="ml-10">已封禁</el-tag>
           </h2>
           <div class="meta-tags">
             <el-tag type="info" size="small"><el-icon><Calendar /></el-icon> 加入于 {{ formatTime(profile.createTime) }}</el-tag>
@@ -16,7 +17,18 @@
         </div>
         
         <div class="action-area">
-          <el-button v-if="profile.id !== myUserId" type="primary" @click="handleChat">发送私信</el-button>
+          <template v-if="profile.id !== myUserId">
+            <el-button type="primary" @click="handleChat">发送私信</el-button>
+            <el-button 
+              v-if="myRole === 1 && profile.role !== 1" 
+              :type="profile.status === 1 ? 'success' : 'danger'" 
+              plain 
+              @click="handleStatusChange"
+            >
+              {{ profile.status === 1 ? '解除封禁' : '封禁该账号' }}
+            </el-button>
+          </template>
+          
           <template v-else>
             <el-button type="danger" plain @click="pwdDialogVisible = true">修改密码</el-button>
             <el-button type="primary" plain @click="openEditDialog"><el-icon><Edit /></el-icon> 编辑资料</el-button>
@@ -71,18 +83,20 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch, reactive } from 'vue'
+import { ref, onMounted, reactive } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Calendar, PriceTag, Location, Edit, Plus } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
-import { getUserProfile, getUserInfo, updateUserInfo, updatePassword } from '@/api/user'
+import { Calendar, Location, Edit, Plus } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { getUserProfile, getUserInfo, updateUserInfo } from '@/api/user'
 import { getItemPage, uploadImage, getMyPublishPage } from '@/api/item'
+import { updateUserStatus } from '@/api/admin' // 🌟 引入封禁接口
 
 const route = useRoute()
 const router = useRouter()
 const loading = ref(false)
 const profile = ref(null)
 const myUserId = ref(null)
+const myRole = ref(0) // 🌟 存储当前登录人的角色
 const itemList = ref([])
 const total = ref(0)
 const editDialogVisible = ref(false)
@@ -91,7 +105,6 @@ const listLoading = ref(false)
 const pageParams = ref({ page: 1, pageSize: 10 })
 const saving = ref(false)
 
-// 🌟 万能路径转换函数
 const getImageUrl = (url) => {
   if (!url) return 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
   if (url.startsWith('http')) return url
@@ -105,6 +118,7 @@ const fetchData = async () => {
     profile.value = res.data
     const userRes = await getUserInfo()
     myUserId.value = userRes.data.id
+    myRole.value = Number(userRes.data.role) // 🌟 获取自身角色
     fetchUserPosts()
   } finally { loading.value = false }
 }
@@ -119,6 +133,19 @@ const fetchUserPosts = async () => {
   listLoading.value = false
 }
 
+// 🌟 管理员封禁/解封此用户
+const handleStatusChange = () => {
+  const isBanning = profile.value.status === 0
+  const actionText = isBanning ? '封禁' : '解封'
+  const targetStatus = isBanning ? 1 : 0
+
+  ElMessageBox.confirm(`确定要${actionText}用户【${profile.value.nickname}】吗？`, '高危操作', { type: 'warning' }).then(async () => {
+    await updateUserStatus(profile.value.id, targetStatus)
+    ElMessage.success(`已${actionText}`)
+    fetchData() // 刷新状态
+  }).catch(() => {})
+}
+
 const openEditDialog = async () => {
   const res = await getUserInfo()
   Object.assign(editForm, res.data)
@@ -128,7 +155,7 @@ const openEditDialog = async () => {
 const handleAvatarUpload = async (options) => {
   const res = await uploadImage(options.file)
   if (res.code === 1) {
-    editForm.avatarUrl = res.data // 存入相对路径
+    editForm.avatarUrl = res.data
     ElMessage.success('上传成功')
   }
 }

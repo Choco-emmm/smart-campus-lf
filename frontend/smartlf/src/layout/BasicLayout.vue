@@ -14,12 +14,24 @@
               消息中心
             </el-badge>
           </el-menu-item>
+
+          <template v-if="myRole === 1">
+            <el-menu-item index="/admin/dashboard" style="margin-left: 20px; color: #E6A23C;">
+              <el-icon><DataLine /></el-icon>数据看板
+            </el-menu-item>
+            <el-menu-item index="/admin/users" style="color: #E6A23C;">
+              <el-icon><User /></el-icon>用户管理
+            </el-menu-item>
+            <el-menu-item index="/admin/items" style="color: #E6A23C;">
+              <el-icon><Document /></el-icon>信息管理
+            </el-menu-item>
+          </template>
         </el-menu>
 
         <div class="user-area">
           <el-dropdown trigger="click" @command="handleCommand">
             <span class="el-dropdown-link pointer">
-              <el-avatar :size="36" :src="myAvatar || 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'" />
+              <el-avatar :size="36" :src="getImageUrl(myAvatar)" />
             </span>
             <template #dropdown>
               <el-dropdown-menu>
@@ -41,7 +53,8 @@
 <script setup>
 import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+// 🌟 引入需要的图标
+import { DataLine, User, Document } from '@element-plus/icons-vue'
 import { getUserInfo } from '@/api/user'
 import { getChatSessions, getCommentNotifications } from '@/api/interact'
 
@@ -49,9 +62,15 @@ const route = useRoute()
 const router = useRouter()
 const myUserId = ref(null)
 const myAvatar = ref('')
+const myRole = ref(0) // 🌟 记录当前用户的角色 (0普通, 1管理)
 const hasGlobalUnread = ref(false)
 
-// 🌟 核心：拉取最新未读状态
+const getImageUrl = (url) => {
+  if (!url) return 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
+  if (url.startsWith('http')) return url
+  return `http://localhost:8080${url}`
+}
+
 const refreshUnreadStatus = async () => {
   if (!localStorage.getItem('token')) return
   try {
@@ -65,19 +84,13 @@ const refreshUnreadStatus = async () => {
   } catch (e) {}
 }
 
-const getImageUrl = (url) => {
-  if (!url) return 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
-  if (url.startsWith('http')) return url
-  return `http://localhost:8080${url}`
-}
-
 const fetchMyInfo = async () => {
   try {
     const res = await getUserInfo()
-    if (res.code === 1) {
+    if (res.code === 1 || res.code === 200) {
       myUserId.value = res.data.id
-      // 🌟 修复：直接处理好图片的显示路径
-      myAvatar.value = getImageUrl(res.data.avatarUrl)
+      myAvatar.value = res.data.avatarUrl
+      myRole.value = Number(res.data.role) // 🌟 获取并设置当前用户的角色
     }
   } catch (e) {}
 }
@@ -91,7 +104,6 @@ const handleCommand = (command) => {
   }
 }
 
-// 🌟 监听路由变化，切换页面时重刷红点
 watch(() => route.path, () => {
   refreshUnreadStatus()
 })
@@ -99,7 +111,6 @@ watch(() => route.path, () => {
 onMounted(() => {
   fetchMyInfo()
   refreshUnreadStatus()
-  // 🌟 监听自定义事件：当消息中心通知我“消息已读”时，立刻重刷
   window.addEventListener('refresh-unread', refreshUnreadStatus)
 })
 

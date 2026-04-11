@@ -54,4 +54,5 @@ public class Constant {
     public static final Integer STATUS_NORMAL = 0;
 
     public static final String TOKEN_BANNED_VALUE = "banned";
+    public static final Long TOP_END_TIME_HOURS = 24L;
 }
