@@ -65,12 +65,19 @@ const refreshUnreadStatus = async () => {
   } catch (e) {}
 }
 
+const getImageUrl = (url) => {
+  if (!url) return 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
+  if (url.startsWith('http')) return url
+  return `http://localhost:8080${url}`
+}
+
 const fetchMyInfo = async () => {
   try {
     const res = await getUserInfo()
     if (res.code === 1) {
       myUserId.value = res.data.id
-      myAvatar.value = res.data.avatarUrl
+      // 🌟 修复：直接处理好图片的显示路径
+      myAvatar.value = getImageUrl(res.data.avatarUrl)
     }
   } catch (e) {}
 }

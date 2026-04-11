@@ -145,6 +145,8 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
         //查主表和详情表
         ItemInfo itemInfo = this.getById(id);
         ItemDetailVO vo = buildBaseItemDetailVO(itemInfo);
+        //设置置顶状态
+        vo.setIsTop(TopEnum.YES.getCode().equals(itemInfo.getIsTop()));
 
         //去核验表里查一下有没有这个物品的记录
         long secureCount = itemSecureService.count(
@@ -572,7 +574,7 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
         User publisher = userService.getById(itemInfo.getUserId());
         if (publisher != null) {
             vo.setPublisherNickname(publisher.getNickname());
-            vo.setPublisherAvatarUrl(publisher.getAvatarUrl());
+            vo.setAvatarUrl(publisher.getAvatarUrl());
         } else {
             vo.setPublisherNickname("用户已注销");
             // 默认头像在前端再设置

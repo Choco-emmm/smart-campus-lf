@@ -26,7 +26,7 @@ public class ItemDetailVO {
     private String publisherNickname;
 
     @Schema(description = "发布者头像URL")
-    private String publisherAvatarUrl;
+    private String avatarUrl;
     
     @Schema(description = "半公开细节")
     private String semiPublicDesc;
@@ -39,6 +39,9 @@ public class ItemDetailVO {
 
     @Schema(description = "是否开启了私密核验模式 (true:需要暗号认领, false:普通公开拿取)")
     private Boolean hasSecureCheck;
+
+    @Schema(description = "是否开启了置顶 (true:已置顶, false:普通帖子)")
+    private Boolean isTop;
 
     private LocalDateTime createTime;
 }

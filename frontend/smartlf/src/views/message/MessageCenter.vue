@@ -28,7 +28,7 @@
             @click="selectSession(session)"
           >
             <el-badge :value="session.unreadCount" :hidden="session.unreadCount === 0" :max="99">
-              <el-avatar :size="40" :src="session.targetAvatar || 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'" />
+              <el-avatar :size="40" :src="getImageUrl(session.targetAvatar)" />
             </el-badge>
             <div class="session-info">
               <div class="session-header">
@@ -50,12 +50,14 @@
             <div class="chat-header"><span>与 {{ currentTargetName }} 的对话</span></div>
             <div class="chat-history" ref="chatHistoryRef" v-loading="historyLoading">
               <div v-for="msg in chatHistory" :key="msg.id" class="message-bubble-wrapper" :class="msg.senderId === currentTargetId ? 'msg-left' : 'msg-right'">
-                <el-avatar v-if="msg.senderId === currentTargetId" :size="36" :src="currentTargetAvatar" class="chat-avatar" />
+                <el-avatar v-if="msg.senderId === currentTargetId" :size="36" :src="getImageUrl(currentTargetAvatar)" class="chat-avatar" />
+                
                 <div class="bubble-content">
                   <div class="bubble" :class="msg.senderId === currentTargetId ? 'bubble-other' : 'bubble-me'">{{ msg.content }}</div>
                   <div class="bubble-time">{{ formatTime(msg.createTime) }}</div>
                 </div>
-                <el-avatar v-if="msg.senderId !== currentTargetId" :size="36" src="https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png" class="chat-avatar" />
+                
+                <el-avatar v-if="msg.senderId !== currentTargetId" :size="36" :src="getImageUrl(myAvatar)" class="chat-avatar" />
               </div>
             </div>
             <div class="chat-input-area">
@@ -104,11 +106,13 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { ChatDotRound, Bell, ChatSquare, ArrowRight } from '@element-plus/icons-vue'
 import { getChatSessions, getChatHistory, sendPrivateMessage, getCommentNotifications } from '@/api/interact'
+import { getUserInfo } from '@/api/user' // 🌟 引入获取个人信息
 
 const route = useRoute()
 const router = useRouter()
 const activeTab = ref('chat') 
 
+const myAvatar = ref('') // 🌟 存放自己的头像地址
 const sessionList = ref([])
 const sessionLoading = ref(false)
 const currentTargetId = ref(null)
@@ -123,11 +127,16 @@ const chatHistoryRef = ref(null)
 const noticeList = ref([])
 const noticeLoading = ref(false)
 
-// 🌟 计算 Tab 上的未读数
+// 🌟 万能图片前缀转换
+const getImageUrl = (url) => {
+  if (!url) return 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
+  if (url.startsWith('http')) return url
+  return `http://localhost:8080${url}`
+}
+
 const totalChatUnread = computed(() => sessionList.value.reduce((sum, s) => sum + s.unreadCount, 0))
 const totalNoticeUnread = computed(() => noticeList.value.reduce((sum, n) => sum + n.unreadCount, 0))
 
-// 🌟 统一通知顶栏刷新的函数
 const notifyHeader = () => {
   window.dispatchEvent(new CustomEvent('refresh-unread'))
 }
@@ -139,7 +148,7 @@ const handleMenuSelect = (index) => {
 
 const handleNoticeClick = (notice) => {
   notice.unreadCount = 0 
-  notifyHeader() // 🌟 立刻通知顶栏红点消失
+  notifyHeader()
   router.push(`/item/${notice.itemId}`)
 }
 
@@ -154,11 +163,11 @@ const fetchSessions = async () => {
 const selectSession = async (session) => {
   currentTargetId.value = session.targetUserId
   currentTargetName.value = session.targetNickname
-  currentTargetAvatar.value = session.targetAvatar || 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
+  currentTargetAvatar.value = session.targetAvatar 
   
   if (session.unreadCount > 0) {
     session.unreadCount = 0 
-    notifyHeader() // 🌟 立刻通知顶栏红点消失
+    notifyHeader()
   }
 
   historyLoading.value = true
@@ -194,8 +203,13 @@ const fetchNotices = async () => {
 const formatTime = (t) => t ? t.replace('T', ' ').substring(0, 16) : ''
 const formatTimeSmall = (t) => t ? t.split('T')[0].substring(5) : ''
 
-onMounted(() => { 
-  // 🌟 初始化时同时加载两边数据，解决“红点不出现”的问题
+onMounted(async () => { 
+  // 🌟 初始化时获取自己的信息，用于显示气泡头像
+  try {
+    const res = await getUserInfo()
+    myAvatar.value = res.data.avatarUrl
+  } catch (e) {}
+  
   fetchSessions()
   fetchNotices()
 })
