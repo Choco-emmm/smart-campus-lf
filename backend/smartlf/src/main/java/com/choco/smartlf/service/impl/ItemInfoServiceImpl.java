@@ -27,6 +27,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -35,7 +36,10 @@ import reactor.core.publisher.Flux;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * @author renpe
@@ -57,6 +61,7 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
     private final UserActiveLogService userActiveLogService;
     private final ItemInfoMapper itemInfoMapper;
     private final ChatClient polishClient;
+    private final StringRedisTemplate stringRedisTemplate;
     @Transactional(rollbackFor = Exception.class)
     @Override
     public void publishItem(ItemPublishDTO dto) {
@@ -458,6 +463,47 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
 
         log.info("AI 描述生成并保存成功，物品ID: {}", itemId);
         return aiResult;
+    }
+
+    @Override
+    public void generateAdminSummary() {
+        // 1. 去数据库查近 7 天的数据
+        LocalDateTime sevenDaysAgo = LocalDateTime.now().minusDays(7);
+        List<ItemInfo> recentItems = this.list(new LambdaQueryWrapper<ItemInfo>()
+                .ge(ItemInfo::getCreateTime, sevenDaysAgo));
+
+        if (recentItems.isEmpty()) {
+
+            return;
+        }
+
+        // 2. 我们自己先帮 AI 算好账
+        // 统计一下大家丢的最多的都是什么东西（比如：雨伞=5次，校园卡=3次）
+        Map<String, Long> nameCountMap = recentItems.stream()
+                .collect(Collectors.groupingBy(ItemInfo::getItemName, Collectors.counting()));
+
+        // 统计一下哪里最容易丢东西（比如：食堂=4次，图书馆=2次）
+        Map<String, Long> locationCountMap = recentItems.stream()
+                .collect(Collectors.groupingBy(ItemInfo::getLocation, Collectors.counting()));
+
+        // 3. 把算好的账本交给 AI
+        String rawDataStr = String.format(AIConstant.RAW_DATA_TEMPLATE, recentItems.size(), nameCountMap.toString(), locationCountMap.toString());
+
+        String promptText = AIConstant.getAdminSummaryPrompt(rawDataStr);
+
+        // 4. 发给 AI 并拿到报告
+        String content = polishClient.prompt()
+                .user(promptText)
+                .call()
+                .content();
+
+        if(content==null){
+            throw new BusinessException("AI 描述生成失败，大模型没有返回内容");
+        }
+        //存入redis
+        stringRedisTemplate.opsForValue().set(AIConstant.SUMMARY_KEY, content, AIConstant.SUMMARY_EXPIRE_DAYS, TimeUnit.DAYS);
+
+        log.info("AI 本周安保报告已生成并存入 Redis！");
     }
 
     private ItemDetailVO buildBaseItemDetailVO(ItemInfo itemInfo) {

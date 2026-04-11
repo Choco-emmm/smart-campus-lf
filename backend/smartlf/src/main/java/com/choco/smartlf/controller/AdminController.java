@@ -1,5 +1,6 @@
 package com.choco.smartlf.controller;
 
+import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.choco.smartlf.entity.Result;
 import com.choco.smartlf.entity.dto.*;
@@ -15,11 +16,13 @@ import com.choco.smartlf.service.ItemInfoService;
 import com.choco.smartlf.service.ReportRecordService;
 import com.choco.smartlf.service.TopApplyRecordService;
 import com.choco.smartlf.service.UserService;
+import com.choco.smartlf.utils.AIConstant;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -37,6 +40,7 @@ public class AdminController {
     private final TopApplyRecordService topApplyRecordService;
     private final ItemInfoService itemInfoService;
     private final UserService userService;
+    private final StringRedisTemplate stringRedisTemplate;
 //
     // ================== 1. 平台数据看板 ==================
 
@@ -52,6 +56,19 @@ public class AdminController {
         // 传递给 Service 层处理
         AdminStatsVO stats = itemInfoService.getPlatformStats(startTime, endTime);
         return Result.success(stats);
+    }
+    @Operation(summary = "获取最新的 AI 智能周报", description = "直接从 Redis 读取定时任务生成的报告，极速响应")
+    @GetMapping("/ai/summary")
+    public Result<String> getAiSummary() {
+        // 直接去 Redis 拿
+        String report = stringRedisTemplate.opsForValue().get(AIConstant.SUMMARY_KEY);
+
+        if (StrUtil.isBlank(report)) {
+            // 兜底：万一 Redis 里没有（比如项目刚启动，或者大模型半夜挂了）
+            return Result.success("本周的安保 AI 报告正在加紧生成中，请明天再来看看吧！");
+        }
+
+        return Result.success(report);
     }
 
     // ================== 2. 举报审核 ==================
