@@ -15,8 +15,9 @@ const router = createRouter({
         { path: '', name: 'Plaza', component: () => import('@/views/plaza/ItemPlaza.vue') },
         { path: 'publish', name: 'Publish', component: () => import('@/views/item/ItemPublish.vue') },
         { path: 'item/:id', name: 'ItemDetail', component: () => import('@/views/item/ItemDetail.vue') },
+        // 🌟 修复点：修改帖子页面必须放在 children 里，且不带前导斜杠（它会继承父级的 /）
+        { path: 'item/edit/:id', name: 'ItemEdit', component: () => import('@/views/item/ItemEdit.vue') },
         { path: 'message', name: 'MessageCenter', component: () => import('@/views/message/MessageCenter.vue') },
-        // 🌟 新增的个人主页路由
         { path: 'profile/:id', name: 'UserProfile', component: () => import('@/views/user/UserProfile.vue') }
       ]
     }

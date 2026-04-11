@@ -90,7 +90,7 @@ public class UserController {
         return Result.success(vo);
     }
 
-    @Operation(summary = "查看个人信息")
+    @Operation(summary = "查看个人信息（也可以当查询回显来使）")
     @GetMapping("/info")
     public Result<UserInfoVO> getUserInfo() {
         // 从 ThreadLocal 中获取当前登录用户的 ID

@@ -8,6 +8,9 @@ import lombok.Data;
 @Data
 @Schema(description = "修改个人信息请求参数")
 public class UserUpdateDTO {
+    @Schema(description = "头像URL")
+    private String avatarUrl;
+
     @Pattern(regexp = Constant.NICKNAME_REGEX, message = "昵称格式不正确")
     @Schema(description = "自定义昵称")
     private String nickname;
