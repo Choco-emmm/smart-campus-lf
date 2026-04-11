@@ -2,7 +2,6 @@ package com.choco.smartlf.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.collection.ListUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -31,7 +30,6 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
-import reactor.core.publisher.Flux;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -64,7 +62,7 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
     private final StringRedisTemplate stringRedisTemplate;
     @Transactional(rollbackFor = Exception.class)
     @Override
-    public void publishItem(ItemPublishDTO dto) {
+    public Long publishItem(ItemPublishDTO dto) {
         //将传来的数据存入主表
         ItemInfo itemInfo = new ItemInfo();
         BeanUtil.copyProperties(dto, itemInfo);
@@ -102,6 +100,7 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
             itemSecureService.save(itemSecure);
         }
         log.info("失物信息发布成功，帖子ID: {}", itemId);
+        return itemId;
     }
 
     @Override

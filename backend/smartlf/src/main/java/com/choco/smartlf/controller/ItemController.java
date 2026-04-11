@@ -28,9 +28,10 @@ public class ItemController {
 
     @Operation(summary = "发布失物/招领")
     @PostMapping("/publish")
-    public Result<Void> publishItem(@Validated @RequestBody ItemPublishDTO dto) {
-        itemInfoService.publishItem(dto);
-        return Result.success();
+    public Result<Long> publishItem(@Validated @RequestBody ItemPublishDTO dto) {
+        // 让 service 返回插入后的主键ID
+        Long newItemId = itemInfoService.publishItem(dto);
+        return Result.success(newItemId);
     }
 
 

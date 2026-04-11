@@ -3,7 +3,7 @@ package com.choco.smartlf.utils;
 public class AIConstant {
 
     public static final String PROMPT_TEMPLATE_POLISH = """
-             你是一个失物招领信息审核员。有同学%s了一个物品。
+             你是一个失物招领信息润色员。有同学%s了一个物品。
              物品名称：%s
              发生地点：%s
              用户的描述：%s
@@ -11,7 +11,7 @@ public class AIConstant {
              如果足够详细，请直接回复四个字：'内容充分'。
              如果不够详细，请你直接输出一段扩写后的详细招领启事（不要说废话）。
              例如：当用户只填写物品名称：校园卡，
-             可以自动补充描述：“该同学拾取到一张校园卡，可能用于校园身份认证或消费，请尽快联系失主。”""";
+             可以补充描述：“该同学拾取到一张校园卡，可能用于校园身份认证或消费，请尽快联系失主。”""";
 
     public static final String RAW_DATA_TEMPLATE = """
             近7天总共发生：%d 件事。

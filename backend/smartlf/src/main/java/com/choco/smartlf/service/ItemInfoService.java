@@ -19,7 +19,7 @@ import java.time.LocalDateTime;
 */
 public interface ItemInfoService extends IService<ItemInfo> {
 
-    void publishItem(ItemPublishDTO dto);
+    Long publishItem(ItemPublishDTO dto);
 
     String uploadImage(MultipartFile file);
 
