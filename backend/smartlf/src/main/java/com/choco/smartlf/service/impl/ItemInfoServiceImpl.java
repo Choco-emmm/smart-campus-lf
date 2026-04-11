@@ -60,6 +60,7 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
     private final ItemInfoMapper itemInfoMapper;
     private final ChatClient polishClient;
     private final StringRedisTemplate stringRedisTemplate;
+
     @Transactional(rollbackFor = Exception.class)
     @Override
     public Long publishItem(ItemPublishDTO dto) {
@@ -87,9 +88,9 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
         log.info("itemDetail: {}", itemDetail);
 
 
-        if (StrUtil.isNotBlank(dto.getVerifyAnswer()) || StrUtil.isNotBlank(dto.getPrivateContact())|| StrUtil.isNotBlank(dto.getVerifyQuestion())) {
+        if (StrUtil.isNotBlank(dto.getVerifyAnswer()) || StrUtil.isNotBlank(dto.getPrivateContact()) || StrUtil.isNotBlank(dto.getVerifyQuestion())) {
             // 兜底校验：核验问题，核验答案，联系方式，三者要么全都没有，要么全都要填
-            if (StrUtil.isBlank(dto.getVerifyAnswer()) || StrUtil.isBlank(dto.getPrivateContact())|| StrUtil.isBlank(dto.getVerifyQuestion())) {
+            if (StrUtil.isBlank(dto.getVerifyAnswer()) || StrUtil.isBlank(dto.getPrivateContact()) || StrUtil.isBlank(dto.getVerifyQuestion())) {
                 throw new BusinessException("开启私密核验时，问题、答案和联系方式必须同时填写！");
             }
             ItemSecure itemSecure = new ItemSecure();
@@ -194,7 +195,7 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
 
         // 4. 更新核验表
         // 先看用户是不是想关闭核验模式（把暗号和联系方式都置空）
-        if (StrUtil.isBlank(dto.getVerifyAnswer()) && StrUtil.isBlank(dto.getPrivateContact())&& StrUtil.isBlank(dto.getVerifyQuestion())) {
+        if (StrUtil.isBlank(dto.getVerifyAnswer()) && StrUtil.isBlank(dto.getPrivateContact()) && StrUtil.isBlank(dto.getVerifyQuestion())) {
             // 用户想关闭：直接把核验记录删掉
             itemSecureService.removeById(itemId);
         } else {
@@ -227,7 +228,7 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
             throw new BusinessException(ResultCodeEnum.FORBIDDEN, "你没有权限删除他人的帖子！");
         }
         item.setIsDeleted(DeletedEnum.YES.getCode());
-       //将物品信息逻辑删除
+        //将物品信息逻辑删除
         this.removeById(id);
         log.info("物品信息逻辑删除成功，物品ID: {}, 操作人ID: {}", id, userId);
     }
@@ -271,19 +272,37 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
         // 2. 构造查询条件
         LambdaQueryWrapper<ItemInfo> wrapper = new LambdaQueryWrapper<>();
 
-        // 被管理员封禁的绝对不显示
+        // A. 基础过滤：排除被封禁的
         wrapper.ne(ItemInfo::getStatus, ItemStatusEnum.BANNED.getCode());
 
-        // 动态条件过滤
-        wrapper.eq(dto.getType() != null, ItemInfo::getType, dto.getType());
+        // B. 类型筛选：寻物(0) 或 招领(1)
+        // 对应广场顶部的 Tab 切换
+        if (dto.getType() != null) {
+            wrapper.eq(ItemInfo::getType, dto.getType());
+        }
+
+        // C. 状态筛选：寻找中(0)、锁定中(1)、已结案(2)
+        if (dto.getStatus() != null) {
+            wrapper.eq(ItemInfo::getStatus, dto.getStatus());
+        }
+
+        // D. 物品名称/描述搜索（关键字）
         if (StrUtil.isNotBlank(dto.getKeyword())) {
             wrapper.and(w -> w.like(ItemInfo::getItemName, dto.getKeyword())
                     .or()
                     .like(ItemInfo::getPublicDesc, dto.getKeyword()));
         }
 
-        // 排序核心：is_top 倒序 (1 排前面)，然后按顶贴时间倒序
-        wrapper.orderByDesc(ItemInfo::getIsTop).orderByDesc(ItemInfo::getLatestReplyTime);
+        // E. 地点筛选
+        if (StrUtil.isNotBlank(dto.getLocation())) {
+            wrapper.like(ItemInfo::getLocation, dto.getLocation());
+        }
+
+        // F. 排序核心：支持“时间排序”与“置顶”
+        // 优先级：1. 置顶贴排最前 2. 按最后活跃时间（顶贴时间）倒序排 3. 最后按创建时间保底
+        wrapper.orderByDesc(ItemInfo::getIsTop)
+                .orderByDesc(ItemInfo::getLatestReplyTime)
+                .orderByDesc(ItemInfo::getCreateTime);
 
         // 3. 执行查询
         this.page(page, wrapper);
@@ -291,10 +310,9 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
         // 4. 数据转换：ItemInfo -> ItemListVO
         return page.convert(itemInfo -> {
             ItemListVO vo = new ItemListVO();
-            //能转的先转了
             BeanUtil.copyProperties(itemInfo, vo);
 
-            // 去详情表拿第一张图片当封面
+            // 查找封面图
             ItemDetail detail = itemDetailService.getById(itemInfo.getId());
             if (detail != null && StrUtil.isNotBlank(detail.getImagesUrl())) {
                 List<String> images = JSONUtil.toList(detail.getImagesUrl(), String.class);
@@ -438,7 +456,7 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
         }
 
         // 2. 构建给 AI 的提示词 (Prompt)
-        String typeStr = Objects.equals(item.getType(), ItemTypeEnum.LOST.getCode()) ?ItemTypeEnum.LOST.getDescription() : ItemTypeEnum.FOUND.getDescription();
+        String typeStr = Objects.equals(item.getType(), ItemTypeEnum.LOST.getCode()) ? ItemTypeEnum.LOST.getDescription() : ItemTypeEnum.FOUND.getDescription();
         String promptText = String.format(
                 AIConstant.PROMPT_TEMPLATE_POLISH,
                 typeStr, item.getItemName(), item.getLocation(), item.getPublicDesc()
@@ -499,7 +517,7 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
                 .call()
                 .content();
 
-        if(content==null){
+        if (content == null) {
             throw new BusinessException("AI 描述生成失败，大模型没有返回内容");
         }
         //存入redis
