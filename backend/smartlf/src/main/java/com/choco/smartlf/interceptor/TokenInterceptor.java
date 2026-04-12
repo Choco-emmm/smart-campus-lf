@@ -62,6 +62,14 @@ public class TokenInterceptor implements HandlerInterceptor {
         }
 
 
+        // 5. 解析令牌+存入ThreadLocal
+        try {
+            Claims claims = JwtUtil.parseJwt(token);
+            UserContext.setData(claims);
+        } catch (Exception e) {
+            log.error("非法令牌解析失败：{}", e.getMessage());
+            throw new BusinessException(ResultCodeEnum.UNAUTHORIZED);
+        }
 
         // 8. 角色权限拦截
         String path = request.getRequestURI();
@@ -70,14 +78,6 @@ public class TokenInterceptor implements HandlerInterceptor {
 
         if (path.contains("/admin") && role != RoleEnum.ADMIN) {
             throw new BusinessException(ResultCodeEnum.FORBIDDEN);
-        }
-        // 5. 解析令牌+存入ThreadLocal
-        try {
-            Claims claims = JwtUtil.parseJwt(token);
-            UserContext.setData(claims);
-        } catch (Exception e) {
-            log.error("非法令牌解析失败：{}", e.getMessage());
-            throw new BusinessException(ResultCodeEnum.UNAUTHORIZED);
         }
         // 7. 刷新Token在Redis里的续命时间
         stringRedisTemplate.expire(key, Constant.TOKEN_EXPIRATION, TimeUnit.MINUTES);
