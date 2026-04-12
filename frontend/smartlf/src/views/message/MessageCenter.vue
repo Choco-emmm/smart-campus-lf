@@ -144,8 +144,8 @@ const handleMenuSelect = (index) => {
 }
 
 const handleNoticeClick = (notice) => {
-  notice.unreadCount = 0 
-  notifyHeader()
+  // 🌟 核心修复：不在这里自欺欺人地标 0 和刷新了，直接跳过去！
+  // 等详情页的 `getCommentList` 完成后端操作后，由详情页触发顶栏刷新。
   router.push(`/item/${notice.itemId}`)
 }
 
@@ -162,30 +162,31 @@ const selectSession = async (session) => {
   currentTargetName.value = session.targetNickname
   currentTargetAvatar.value = session.targetAvatar 
   
-  if (session.unreadCount > 0) {
-    session.unreadCount = 0 
-    notifyHeader()
-  }
+  const hasUnread = session.unreadCount > 0
 
   historyLoading.value = true
   try {
     const res = await getChatHistory(currentTargetId.value)
     chatHistory.value = res.data || []
     scrollToBottom()
-  } finally { historyLoading.value = false }
+
+    if (hasUnread) {
+      session.unreadCount = 0 
+      notifyHeader()
+    }
+  } finally { 
+    historyLoading.value = false 
+  }
 }
 
-// 🌟 核心：如果是其他页面跳转来的，自动选中或新建会话
 const checkQueryAndSelect = () => {
   const { targetId, targetName, targetAvatar } = route.query
   if (targetId) {
     activeTab.value = 'chat'
     const tId = Number(targetId)
     
-    // 在现有会话中寻找
     let session = sessionList.value.find(s => s.targetUserId === tId)
     
-    // 如果之前没聊过，就强行创建一个临时会话放前面
     if (!session) {
       session = {
         targetUserId: tId,
@@ -196,10 +197,8 @@ const checkQueryAndSelect = () => {
       sessionList.value.unshift(session)
     }
     
-    // 选中该会话
     selectSession(session)
     
-    // 清空 URL 参数，防止刷新时再次触发
     router.replace({ path: '/message', query: {} })
   }
 }
@@ -234,10 +233,8 @@ onMounted(async () => {
     myAvatar.value = res.data.avatarUrl
   } catch (e) {}
   
-  // 🌟 等待会话列表加载完毕，再执行选中检索
   await fetchSessions()
   checkQueryAndSelect() 
-  
   fetchNotices()
 })
 </script>
@@ -250,7 +247,6 @@ onMounted(async () => {
 .tab-badge :deep(.el-badge__content) { top: 12px; right: -2px; }
 .session-list { flex: 1; overflow-y: auto; }
 
-/* 🌟 修改列表项布局，使单行文字居中 */
 .session-item { display: flex; align-items: center; padding: 15px; cursor: pointer; transition: all 0.2s; }
 .session-item:hover { background-color: #f2f3f5; }
 .session-item.active { background-color: #e8f3ff; border-left: 3px solid #1e80ff; }

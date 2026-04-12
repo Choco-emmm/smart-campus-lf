@@ -43,11 +43,7 @@ public class TokenInterceptor implements HandlerInterceptor {
         if (StrUtil.isBlank(token)) {
             throw new BusinessException(ResultCodeEnum.UNAUTHORIZED);
         }
-        // 4. 判断token是否被封禁
-        if (Constant.TOKEN_BANNED_VALUE.equals(token)) {
-            log.warn("拦截到已被强制封禁的用户请求，将其踢出，用户ID: {}", UserContext.getUserId());
-            throw new BusinessException(ResultCodeEnum.USER_BANNED);
-        }
+
 
         // 5. 解析令牌+存入ThreadLocal
         try {
@@ -58,10 +54,20 @@ public class TokenInterceptor implements HandlerInterceptor {
             throw new BusinessException(ResultCodeEnum.UNAUTHORIZED);
         }
 
-        // 6. 校验Redis中是否过期（单点登录/强制下线防线）
+        // 6. 校验Redis中是否存在（不存在就是过期了）
         String key = Constant.TOKEN_PREFIX + UserContext.getUserId();
-        if(StrUtil.isBlank(stringRedisTemplate.opsForValue().get(key))){
+        String tokenInRedis = stringRedisTemplate.opsForValue().get(key);
+        if(StrUtil.isBlank(tokenInRedis)){
             throw new BusinessException(ResultCodeEnum.UNAUTHORIZED);
+        }
+        if(Constant.TOKEN_BANNED_VALUE.equals(tokenInRedis)) {
+            log.warn("拦截到已被强制封禁的用户请求，将其踢出，用户ID: {}", UserContext.getUserId());
+            throw new BusinessException(ResultCodeEnum.USER_BANNED);
+        }
+        // 4. 判断token是否被封禁
+        if (Constant.TOKEN_BANNED_VALUE.equals(token)) {
+            log.warn("拦截到已被强制封禁的用户请求，将其踢出，用户ID: {}", UserContext.getUserId());
+            throw new BusinessException(ResultCodeEnum.USER_BANNED);
         }
         // 7. 刷新Token在Redis里的续命时间
         stringRedisTemplate.expire(key, Constant.TOKEN_EXPIRATION, TimeUnit.MINUTES);

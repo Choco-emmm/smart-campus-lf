@@ -32,11 +32,38 @@
           
           <div class="desc-content">{{ detail.semiPublicDesc || '楼主暂无详细描述' }}</div>
 
-          <div v-if="detail.aiGeneratedDesc" class="ai-desc-container">
+          <div class="ai-desc-container">
             <div class="ai-desc-title">
               <el-icon><MagicStick /></el-icon> AI 智能辅助描述
             </div>
-            <div class="markdown-body" v-html="parsedAiDesc"></div>
+            <div class="markdown-body" v-if="parsedAiDesc" v-html="parsedAiDesc"></div>
+            <div class="generating-text" v-else>
+              <el-icon class="is-loading"><Loading /></el-icon> AI智能润色生成中，请过一会儿再来看...
+            </div>
+          </div>
+
+          <div v-if="myRole === 1" class="admin-secure-container">
+            <div class="secure-title">
+              <el-icon><Lock /></el-icon> 管理员专属：后台核验与发帖人档案
+            </div>
+            
+            <div class="secure-subtitle">帖子核验与隐私数据</div>
+            <el-descriptions :column="2" border size="small" class="mb-15">
+              <el-descriptions-item label="核验问题">{{ detail.verifyQuestion || '未设置' }}</el-descriptions-item>
+              <el-descriptions-item label="核验答案">{{ detail.verifyAnswer || '未设置' }}</el-descriptions-item>
+              <el-descriptions-item label="私密联系方式" :span="2">{{ detail.privateContact || '未设置' }}</el-descriptions-item>
+            </el-descriptions>
+
+            <div class="secure-subtitle" v-if="adminPublisherInfo">发帖人后台敏感档案</div>
+            <el-descriptions :column="2" border size="small" v-if="adminPublisherInfo">
+              <el-descriptions-item label="用户ID / 账号">{{ adminPublisherInfo.id }} / {{ adminPublisherInfo.username }}</el-descriptions-item>
+              <el-descriptions-item label="手机号">{{ adminPublisherInfo.phone || '未绑定' }}</el-descriptions-item>
+              <el-descriptions-item label="邮箱" :span="2">{{ adminPublisherInfo.email || '未绑定' }}</el-descriptions-item>
+              <el-descriptions-item label="历史违规下架">
+                <el-tag type="danger" size="small">{{ adminPublisherInfo.violationCount || 0 }} 次违规</el-tag>
+              </el-descriptions-item>
+              <el-descriptions-item label="最后活跃时间">{{ formatTime(adminPublisherInfo.lastActiveTime) || '暂无记录' }}</el-descriptions-item>
+            </el-descriptions>
           </div>
 
           <div class="image-gallery" v-if="detail.imagesUrlList?.length">
@@ -60,11 +87,17 @@
             <div class="comment-item" v-for="(comment, index) in commentList" :key="comment.id" style="display: flex; gap: 15px; padding: 15px 0; border-bottom: 1px solid #f2f3f5;">
               <el-avatar :size="40" :src="getImageUrl(comment.avatarUrl)" @click="goToProfile(comment.userId)" class="pointer" />
               <div style="flex: 1;">
-                <div style="display: flex; justify-content: space-between;">
-                  <span style="font-weight: bold;">{{ comment.nickname }}</span>
-                  <span style="color: #c0c4cc;">#{{ index + 1 }}</span>
+                
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-weight: bold; color: #1d2129;">{{ comment.nickname }}</span>
+                    <el-tag v-if="String(comment.userId) === String(detail.userId)" size="small" type="primary" effect="plain" round>楼主</el-tag>
+                    <el-tag v-if="Number(comment.role) === 1" size="small" type="warning" effect="dark" round>管理员</el-tag>
+                  </div>
+                  <span style="color: #c0c4cc; font-size: 13px;">#{{ index + 1 }}楼</span>
                 </div>
-                <div style="margin-top: 5px;">{{ comment.content }}</div>
+                
+                <div style="margin-top: 8px; color: #4e5969; line-height: 1.5;">{{ comment.content }}</div>
               </div>
             </div>
           </div>
@@ -138,11 +171,11 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { PriceTag, Location, Warning, Top, Remove, MagicStick } from '@element-plus/icons-vue'
+import { PriceTag, Location, Warning, Top, Remove, MagicStick, Lock, Loading } from '@element-plus/icons-vue' // 🌟 引入 Loading 图标
 import { getItemDetail, deleteItem, reportItem, updateItemStatus, applyItemTop } from '@/api/item'
 import { getCommentList, addComment } from '@/api/interact'
 import { getUserInfo } from '@/api/user'
-import { banItem, toggleTopByAdmin } from '@/api/admin' // 🌟 引入刚添加的一键置顶接口
+import { banItem, toggleTopByAdmin, getItemDetailByAdmin, getUserDetailByAdmin } from '@/api/admin'
 import { marked } from 'marked'
 
 const route = useRoute()
@@ -153,6 +186,8 @@ const myUserId = ref(null)
 const myRole = ref(0)
 const commentList = ref([])
 const newComment = ref('')
+
+const adminPublisherInfo = ref(null)
 
 const reportDialogVisible = ref(false)
 const selectedReasons = ref([])
@@ -174,14 +209,31 @@ const getImageUrl = (url) => {
 const fetchData = async () => {
   loading.value = true
   try {
-    const res = await getItemDetail(route.params.id)
-    detail.value = res.data
     const userRes = await getUserInfo()
     myUserId.value = userRes.data.id
     myRole.value = userRes.data.role
 
+    let res;
+    if (myRole.value === 1) {
+      res = await getItemDetailByAdmin(route.params.id) 
+    } else {
+      res = await getItemDetail(route.params.id)
+    }
+    detail.value = res.data
+
+    if (myRole.value === 1 && detail.value.userId) {
+       try {
+         const pubRes = await getUserDetailByAdmin(detail.value.userId)
+         adminPublisherInfo.value = pubRes.data
+       } catch (e) {
+         console.warn("拉取发帖人档案失败", e)
+       }
+    }
+
     const commentRes = await getCommentList(route.params.id)
     commentList.value = commentRes.data || []
+
+    window.dispatchEvent(new CustomEvent('refresh-unread'))
   } finally { loading.value = false }
 }
 
@@ -205,7 +257,6 @@ const handleAdminBan = () => {
   }).catch(() => {})
 }
 
-// 🌟 管理员一键置顶/取消逻辑
 const handleAdminToggleTop = async () => {
   const targetTopStatus = detail.value.isTop ? 0 : 1
   const actionText = targetTopStatus === 1 ? '一键置顶' : '取消置顶'
@@ -213,7 +264,7 @@ const handleAdminToggleTop = async () => {
   ElMessageBox.confirm(`确定要${actionText}该帖子吗？`, '管理员操作', { type: 'warning' }).then(async () => {
     await toggleTopByAdmin(detail.value.id, targetTopStatus)
     ElMessage.success(`${actionText}成功`)
-    fetchData() // 刷新页面数据
+    fetchData()
   }).catch(() => {})
 }
 
@@ -271,6 +322,40 @@ onMounted(() => fetchData())
   gap: 6px;
   font-size: 15px;
 }
+
+/* 🌟 AI 生成中的占位提示样式 */
+.generating-text {
+  color: #909399;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 0;
+}
+
+.admin-secure-container {
+  margin: 20px 0;
+  padding: 16px 20px;
+  background: #fff4f4;
+  border: 1px solid #fbc4c4;
+  border-radius: 6px;
+}
+.secure-title {
+  font-weight: bold;
+  color: #f56c6c;
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 16px;
+}
+.secure-subtitle {
+  font-size: 13px;
+  font-weight: bold;
+  color: #606266;
+  margin-bottom: 8px;
+}
+.mb-15 { margin-bottom: 15px; }
 
 .markdown-body :deep(p) { line-height: 1.6; color: #4e5969; margin-bottom: 8px; font-size: 15px; }
 .markdown-body :deep(ul), .markdown-body :deep(ol) { padding-left: 20px; margin-bottom: 10px; color: #4e5969; line-height: 1.6;}
