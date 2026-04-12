@@ -54,15 +54,13 @@ public class TokenInterceptor implements HandlerInterceptor {
         if(StrUtil.isBlank(tokenInRedis)){
             throw new BusinessException(ResultCodeEnum.UNAUTHORIZED);
         }
+
+        // 4. 判断token是否被封禁
         if(Constant.TOKEN_BANNED_VALUE.equals(tokenInRedis)) {
             log.warn("拦截到已被强制封禁的用户请求，将其踢出，用户ID: {}", UserContext.getUserId());
             throw new BusinessException(ResultCodeEnum.USER_BANNED);
         }
-        // 4. 判断token是否被封禁
-        if (Constant.TOKEN_BANNED_VALUE.equals(token)) {
-            log.warn("拦截到已被强制封禁的用户请求，将其踢出，用户ID: {}", UserContext.getUserId());
-            throw new BusinessException(ResultCodeEnum.USER_BANNED);
-        }
+
 
 
         // 8. 角色权限拦截
