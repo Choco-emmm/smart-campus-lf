@@ -89,8 +89,9 @@ import { useRoute, useRouter } from 'vue-router'
 import { Calendar, Location, Edit, Plus } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getUserProfile, getUserInfo, updateUserInfo } from '@/api/user'
-import { getItemPage, uploadImage, getMyPublishPage } from '@/api/item'
-import { updateUserStatus } from '@/api/admin' // 🌟 保留管理员封禁账号的接口
+// 🌟 引入刚写好的 getOthersPublishPage
+import { getOthersPublishPage, uploadImage, getMyPublishPage } from '@/api/item'
+import { updateUserStatus } from '@/api/admin'
 
 const route = useRoute()
 const router = useRouter()
@@ -127,13 +128,14 @@ const fetchData = async () => {
   } finally { loading.value = false }
 }
 
-// 🌟 回滚逻辑：要么看自己的（全量），要么看别人的（仅普通公开接口，过滤下架的）
+// 🌟 核心逻辑更新：使用你新建的明确接口
 const fetchUserPosts = async () => {
   listLoading.value = true
   try {
     let res = (Number(route.params.id) === myUserId.value) 
-      ? await getMyPublishPage({ page: pageParams.value.page, pageSize: 10 }) 
-      : await getItemPage({ page: pageParams.value.page, pageSize: 10, userId: route.params.id })
+      ? await getMyPublishPage({ page: pageParams.value.page, pageSize: 10 }) // 看自己的
+      : await getOthersPublishPage(route.params.id, { page: pageParams.value.page, pageSize: 10 }) // 看别人的
+      
     itemList.value = res.data.records || []
     total.value = res.data.total || 0
   } catch (e) {
@@ -143,7 +145,6 @@ const fetchUserPosts = async () => {
   }
 }
 
-// 🌟 管理员依然可以在主页封禁/解封该用户
 const handleStatusChange = () => {
   const isBanning = profile.value.status === 0
   const actionText = isBanning ? '封禁' : '解封'

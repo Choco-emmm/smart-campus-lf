@@ -21,6 +21,20 @@ export function getMyPublishPage(params) {
     })
 }
 
+export const getOthersPublishPage = (userId, params) => {
+    return request({
+        // 🚨 重点 1：必须是反引号（`），并且路径前面要加上 /item
+        // 🚨 重点 2：userId 必须拼接到 URL 里面，而不是放在 params 里
+        url: `/item/others-page/${userId}`,
+        method: 'get',
+        params: {
+            // 🚨 重点 3：后端接收的名字叫 pageNum，前端传来的是 params.page，这里要做个映射
+            pageNum: params.page,
+            pageSize: params.pageSize
+        }
+    })
+}
+
 // 获取帖子详情
 export function getItemDetail(id) {
     return request({ url: `/item/${id}`, method: 'get' })

@@ -48,15 +48,6 @@ public class TokenInterceptor implements HandlerInterceptor {
         }
 
 
-        // 5. 解析令牌+存入ThreadLocal
-        try {
-            Claims claims = JwtUtil.parseJwt(token);
-            UserContext.setData(claims);
-        } catch (Exception e) {
-            log.error("非法令牌解析失败：{}", e.getMessage());
-            throw new BusinessException(ResultCodeEnum.UNAUTHORIZED);
-        }
-
         // 6. 校验Redis中是否存在（不存在就是过期了）
         String key = Constant.TOKEN_PREFIX + UserContext.getUserId();
         String tokenInRedis = stringRedisTemplate.opsForValue().get(key);
@@ -72,9 +63,7 @@ public class TokenInterceptor implements HandlerInterceptor {
             log.warn("拦截到已被强制封禁的用户请求，将其踢出，用户ID: {}", UserContext.getUserId());
             throw new BusinessException(ResultCodeEnum.USER_BANNED);
         }
-        // 7. 刷新Token在Redis里的续命时间
-        stringRedisTemplate.expire(key, Constant.TOKEN_EXPIRATION, TimeUnit.MINUTES);
-        log.info("Token续期成功，用户ID: {}", UserContext.getUserId());
+
 
         // 8. 角色权限拦截
         String path = request.getRequestURI();
@@ -84,6 +73,17 @@ public class TokenInterceptor implements HandlerInterceptor {
         if (path.contains("/admin") && role != RoleEnum.ADMIN) {
             throw new BusinessException(ResultCodeEnum.FORBIDDEN);
         }
+        // 5. 解析令牌+存入ThreadLocal
+        try {
+            Claims claims = JwtUtil.parseJwt(token);
+            UserContext.setData(claims);
+        } catch (Exception e) {
+            log.error("非法令牌解析失败：{}", e.getMessage());
+            throw new BusinessException(ResultCodeEnum.UNAUTHORIZED);
+        }
+        // 7. 刷新Token在Redis里的续命时间
+        stringRedisTemplate.expire(key, Constant.TOKEN_EXPIRATION, TimeUnit.MINUTES);
+        log.info("Token续期成功，用户ID: {}", UserContext.getUserId());
 
         // 9. 记录用户最后活跃时间到 Redis Hash 中
         UserActiveLog userActiveLog = new UserActiveLog();
