@@ -75,7 +75,7 @@ import { reactive, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Plus } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import { getEditEcho, updateItem, uploadImage } from '@/api/item'
+import { getEditEcho, updateItem, uploadImage, generateAiDesc } from '@/api/item'
 
 const route = useRoute()
 const router = useRouter()
@@ -97,7 +97,6 @@ const form = reactive({
 
 const fileList = ref([])
 
-// 🌟 级联选择数据保持和发布页一致
 const locationOptions = [
   {
     value: '教学楼', label: '教学楼',
@@ -121,33 +120,24 @@ const locationOptions = [
 const selectedLocationPath = ref([])
 const locationDetail = ref('')
 
-// 🌟 核心：解析从后端拿到的字符串地址
 const parseLocationEcho = (locStr) => {
   if (!locStr) return { path: [], detail: '' }
-
-  // 1. 如果是以教学楼开头
   if (locStr.startsWith('教学楼-')) {
     const parts = locStr.split('-')
     if (parts.length >= 2 && ['一号楼', '二号楼', '三号楼', '四号楼', '五号楼'].includes(parts[1])) {
       return { path: ['教学楼', parts[1]], detail: parts.slice(2).join('-') }
     }
   }
-  
-  // 2. 如果是以饭堂开头
   if (locStr.startsWith('饭堂-')) {
     const parts = locStr.split('-')
     if (parts.length >= 2 && ['第一饭堂', '第二饭堂', '第三饭堂', '第四饭堂'].includes(parts[1])) {
       return { path: ['饭堂', parts[1]], detail: parts.slice(2).join('-') }
     }
   }
-
-  // 3. 如果是图书馆开头
   if (locStr.startsWith('图书馆')) {
     const detail = locStr.replace(/^图书馆-?/, '')
     return { path: ['图书馆'], detail: detail }
   }
-
-  // 4. 其他不匹配预设的（自己乱填的），全部丢进“其他”分类里
   return { path: ['其他'], detail: locStr }
 }
 
@@ -158,10 +148,13 @@ onMounted(async () => {
     Object.assign(form, res.data)
     fileList.value = (res.data.imagesUrlList || []).map(url => ({ url }))
 
-    // 🌟 解析并回显地点
     const parsedLoc = parseLocationEcho(res.data.location)
     selectedLocationPath.value = parsedLoc.path
     locationDetail.value = parsedLoc.detail
+    
+    form.verifyQuestion = res.data.checkQuestion || ''
+    form.verifyAnswer = res.data.checkAnswer || ''
+    form.privateContact = res.data.contactInfo || ''
   }
   pageLoading.value = false
 })
@@ -180,7 +173,6 @@ const handleRemove = (file) => {
 }
 
 const onSubmit = async () => {
-  // 🌟 提交时，重新把两部分拼接为完整字符串
   let base = (selectedLocationPath.value && selectedLocationPath.value.length) ? selectedLocationPath.value.join('-') : ''
   if (base === '其他') {
     form.location = locationDetail.value || '' 
@@ -198,7 +190,9 @@ const onSubmit = async () => {
   try {
     const res = await updateItem(form)
     if (res.code === 1 || res.code === 200) {
-      ElMessage.success('修改成功')
+      generateAiDesc(form.id).catch(e => console.error('AI润色更新失败', e))
+      
+      ElMessage.success('修改成功！AI 正在为您重新润色描述...')
       router.push(`/item/${form.id}`)
     }
   } finally {

@@ -5,7 +5,7 @@ export function getItemPage(params) {
     return request({
         url: '/item/page',
         method: 'get',
-        params // 对应后端的 QueryDTO
+        params
     })
 }
 
@@ -22,25 +22,57 @@ export function getMyPublishPage(params) {
 }
 
 // 获取帖子详情
-export function getItemDetail(id) { return request({ url: `/item/${id}`, method: 'get' }) }
+export function getItemDetail(id) {
+    return request({ url: `/item/${id}`, method: 'get' })
+}
 
 // 获取编辑回显数据
-export function getEditEcho(id) { return request({ url: `/item/edit-echo/${id}`, method: 'get' }) }
+export function getEditEcho(id) {
+    return request({ url: `/item/edit-echo/${id}`, method: 'get' })
+}
 
 // 发布与修改
-export function publishItem(data) { return request({ url: '/item/publish', method: 'post', data }) }
-export function updateItem(data) { return request({ url: '/item/update', method: 'put', data }) }
+export function publishItem(data) {
+    return request({ url: '/item/publish', method: 'post', data })
+}
+export function updateItem(data) {
+    return request({ url: '/item/update', method: 'put', data })
+}
 
 // 图片上传
 export function uploadImage(file) {
     const formData = new FormData()
     formData.append('file', file)
-    return request({ url: '/item/image', method: 'post', data: formData, headers: { 'Content-Type': 'multipart/form-data' } })
+    return request({
+        url: '/item/image',
+        method: 'post',
+        data: formData,
+        headers: { 'Content-Type': 'multipart/form-data' }
+    })
 }
 
 // 功能性接口
-export function generateAiDesc(itemId) { return request({ url: `/item/ai/generate-desc/${itemId}`, method: 'post' }) }
-export function deleteItem(id) { return request({ url: `/item/delete/${id}`, method: 'delete' }) }
-export function reportItem(data) { return request({ url: '/item/report', method: 'post', data }) }
-export function applyItemTop(data) { return request({ url: '/item/top/apply', method: 'post', data }) }
-export function updateItemStatus(data) { return request({ url: '/item/status', method: 'put', data }) }
+export function generateAiDesc(itemId) {
+    return request({ url: `/item/ai/generate-desc/${itemId}`, method: 'post' })
+}
+export function deleteItem(id) {
+    return request({ url: `/item/delete/${id}`, method: 'delete' })
+}
+export function reportItem(data) {
+    return request({ url: '/item/report', method: 'post', data })
+}
+export function applyItemTop(data) {
+    return request({ url: '/item/top/apply', method: 'post', data })
+}
+export function updateItemStatus(data) {
+    return request({ url: '/item/status', method: 'put', data })
+}
+
+// 提交暗号、获取私密联系方式
+export function verifyItemSecure(itemId, answer) {
+    return request({
+        url: `/item/verify/${itemId}`,
+        method: 'post',
+        params: { answer }
+    })
+}

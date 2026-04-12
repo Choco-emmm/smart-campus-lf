@@ -1,58 +1,113 @@
 import request from '@/utils/request'
 
-// ================= 1. 平台数据看板 =================
+// 获取数据看板概览
 export function getStatsOverview(params) {
-    return request({ url: '/admin/stats/overview', method: 'get', params })
+    return request({
+        url: '/admin/stats/overview',
+        method: 'get',
+        params
+    })
 }
+
+// 获取AI周报
 export function getAiSummary() {
-    return request({ url: '/admin/ai/summary', method: 'get' })
+    return request({
+        url: '/admin/ai/summary',
+        method: 'get'
+    })
 }
 
-// ================= 2. 用户管理 =================
+// 分页查询用户
 export function getUserPage(data) {
-    return request({ url: '/admin/user/page', method: 'post', data })
-}
-export function getUserDetailByAdmin(userId) {
-    return request({ url: `/admin/user/${userId}`, method: 'get' })
-}
-export function updateUserStatus(userId, status) {
-    return request({ url: `/admin/user/status/${userId}`, method: 'put', params: { status } })
+    return request({
+        url: '/admin/user/page',
+        method: 'post',
+        data
+    })
 }
 
-// ================= 3. 举报与信息治理 =================
-// 🌟 新增：管理员无视下架状态强查帖子详情
-export function getItemDetailByAdmin(itemId) {
-    return request({ url: `/admin/item/detail/${itemId}`, method: 'get' })
+// 封禁/解封用户
+export function updateUserStatus(userId, status) {
+    return request({
+        url: `/admin/user/status/${userId}`,
+        method: 'put',
+        params: { status }
+    })
 }
-// 一键违规下架
-export function banItem(itemId) {
-    return request({ url: `/admin/item/ban/${itemId}`, method: 'put' })
+
+// 查看用户详情（管理员视角）
+export function getUserDetailByAdmin(userId) {
+    return request({
+        url: `/admin/user/${userId}`,
+        method: 'get'
+    })
 }
-// 分页查询举报列表
+
+// 分页查询举报
 export function getReportPage(data) {
-    return request({ url: '/admin/report/page', method: 'post', data })
+    return request({
+        url: '/admin/report/page',
+        method: 'post',
+        data
+    })
 }
-// 处理举报 (action: 0核实下架, 1驳回)
-export function resolveReport(data) {
-    return request({ url: '/admin/report/resolve', method: 'put', data })
-}
+
+// 查看举报单详情
 export function getReportDetail(reportId) {
-    return request({ url: `/admin/report/${reportId}`, method: 'get' })
+    return request({
+        url: `/admin/report/${reportId}`,
+        method: 'get'
+    })
 }
-// ================= 4. 置顶审核 =================
+
+// 处理举报
+export function resolveReport(data) {
+    return request({
+        url: '/admin/report/resolve',
+        method: 'put',
+        data
+    })
+}
+
 // 分页查询置顶申请
 export function getTopApplyPage(data) {
-    return request({ url: '/admin/top-apply/page', method: 'post', data })
+    return request({
+        url: '/admin/top-apply/page',
+        method: 'post',
+        data
+    })
 }
-// 处理置顶申请 (action: 0同意, 1拒绝)
+
+// 审批置顶
 export function resolveTopApply(data) {
-    return request({ url: '/admin/top-apply/resolve', method: 'put', data })
+    return request({
+        url: '/admin/top-apply/resolve',
+        method: 'put',
+        data
+    })
 }
-// 🌟 新增：管理员一键置顶帖子
+
+// 一键违规下架帖子
+export function banItem(itemId) {
+    return request({
+        url: `/admin/item/ban/${itemId}`,
+        method: 'put'
+    })
+}
+
+// 管理员一键置顶/取消置顶帖子
 export function toggleTopByAdmin(itemId, isTop) {
     return request({
         url: `/admin/item/top/${itemId}`,
         method: 'put',
-        params: { isTop } // 后端是用 @RequestParam 接收的
+        params: { isTop }
+    })
+}
+
+// 管理员强制查看帖子底表详情
+export function getItemDetailByAdmin(itemId) {
+    return request({
+        url: `/admin/item/detail/${itemId}`,
+        method: 'get'
     })
 }

@@ -351,7 +351,8 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
         // 因为 MyBatis-Plus 的 count() 默认是 SELECT COUNT(*)，无法直接去重
         // 所以我们这里用 groupBy 分组查询来达到去重的效果，获取分组后的集合大小
         long activeUsers = userActiveLogService.list(new LambdaQueryWrapper<UserActiveLog>()
-                .select(UserActiveLog::getUserId) // 只查 userId 字段，节省内存
+                .select(UserActiveLog::getUserId) // 只查 userId 字段
+                .ne(UserActiveLog::getRole, RoleEnum.ADMIN.getCode())//不需要统计管理员身份的活跃数据？
                 .ge(UserActiveLog::getActiveTime, startTime) // 大于等于开始时间
                 .le(UserActiveLog::getActiveTime, endTime)   // 小于等于结束时间
                 .groupBy(UserActiveLog::getUserId) // 按用户ID去重

@@ -16,7 +16,13 @@
                 <el-icon><Warning /></el-icon> 举报
               </el-button>
             </div>
+            
             <h1 class="post-title">{{ detail.publicDesc }}</h1>
+            
+            <div v-if="detail.hasSecureCheck" class="secure-badge">
+              <el-icon><Key /></el-icon> 楼主已开启隐私核验 / 专属认领流程
+            </div>
+
             <div class="post-meta">
               <span class="nickname pointer" @click="goToProfile(detail.userId)">{{ detail.publisherNickname }}</span>
               <span class="dot">·</span>
@@ -27,6 +33,7 @@
           
           <div class="info-bar">
             <div class="info-item"><el-icon><PriceTag /></el-icon> 物品：{{ detail.itemName }}</div>
+            <div class="info-item"><el-icon><Clock /></el-icon> 发生时间：{{ formatEventTime(detail.eventTime) }}</div>
             <div class="info-item"><el-icon><Location /></el-icon> 地点：{{ detail.location }}</div>
           </div>
           
@@ -44,25 +51,12 @@
 
           <div v-if="myRole === 1" class="admin-secure-container">
             <div class="secure-title">
-              <el-icon><Lock /></el-icon> 管理员专属：后台核验与发帖人档案
+              <el-icon><Lock /></el-icon> 管理员专属：底表核验数据展示
             </div>
-            
-            <div class="secure-subtitle">帖子核验与隐私数据</div>
-            <el-descriptions :column="2" border size="small" class="mb-15">
-              <el-descriptions-item label="核验问题">{{ detail.verifyQuestion || '未设置' }}</el-descriptions-item>
-              <el-descriptions-item label="核验答案">{{ detail.verifyAnswer || '未设置' }}</el-descriptions-item>
-              <el-descriptions-item label="私密联系方式" :span="2">{{ detail.privateContact || '未设置' }}</el-descriptions-item>
-            </el-descriptions>
-
-            <div class="secure-subtitle" v-if="adminPublisherInfo">发帖人后台敏感档案</div>
-            <el-descriptions :column="2" border size="small" v-if="adminPublisherInfo">
-              <el-descriptions-item label="用户ID / 账号">{{ adminPublisherInfo.id }} / {{ adminPublisherInfo.username }}</el-descriptions-item>
-              <el-descriptions-item label="手机号">{{ adminPublisherInfo.phone || '未绑定' }}</el-descriptions-item>
-              <el-descriptions-item label="邮箱" :span="2">{{ adminPublisherInfo.email || '未绑定' }}</el-descriptions-item>
-              <el-descriptions-item label="历史违规下架">
-                <el-tag type="danger" size="small">{{ adminPublisherInfo.violationCount || 0 }} 次违规</el-tag>
-              </el-descriptions-item>
-              <el-descriptions-item label="最后活跃时间">{{ formatTime(adminPublisherInfo.lastActiveTime) || '暂无记录' }}</el-descriptions-item>
+            <el-descriptions :column="2" border size="small">
+              <el-descriptions-item label="核验问题">{{ detail.checkQuestion || '未设置' }}</el-descriptions-item>
+              <el-descriptions-item label="核验答案">{{ detail.checkAnswer || '未设置' }}</el-descriptions-item>
+              <el-descriptions-item label="私密联系方式" :span="2">{{ detail.contactInfo || '未设置' }}</el-descriptions-item>
             </el-descriptions>
           </div>
 
@@ -87,7 +81,6 @@
             <div class="comment-item" v-for="(comment, index) in commentList" :key="comment.id" style="display: flex; gap: 15px; padding: 15px 0; border-bottom: 1px solid #f2f3f5;">
               <el-avatar :size="40" :src="getImageUrl(comment.avatarUrl)" @click="goToProfile(comment.userId)" class="pointer" />
               <div style="flex: 1;">
-                
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                   <div style="display: flex; align-items: center; gap: 8px;">
                     <span style="font-weight: bold; color: #1d2129;">{{ comment.nickname }}</span>
@@ -96,7 +89,6 @@
                   </div>
                   <span style="color: #c0c4cc; font-size: 13px;">#{{ index + 1 }}楼</span>
                 </div>
-                
                 <div style="margin-top: 8px; color: #4e5969; line-height: 1.5;">{{ comment.content }}</div>
               </div>
             </div>
@@ -122,14 +114,12 @@
                   <el-option :value="2" label="已结案" />
                 </el-select>
               </div>
-              <el-divider />
+              <el-divider style="margin: 0;" />
               <el-button type="primary" class="full-btn" @click="router.push(`/item/edit/${detail.id}`)">修改帖子</el-button>
-              
               <el-button v-if="myRole !== 1 && !detail.isTop" type="warning" class="full-btn" @click="handleTopApply">申请置顶</el-button>
               <el-button v-if="myRole === 1" :type="detail.isTop ? 'info' : 'warning'" class="full-btn" @click="handleAdminToggleTop">
                 {{ detail.isTop ? '取消置顶' : '一键置顶' }}
               </el-button>
-              
               <el-button type="danger" plain class="full-btn" @click="handleDelete">删除此帖</el-button>
             </div>
             
@@ -137,13 +127,23 @@
               <el-button :type="detail.isTop ? 'info' : 'warning'" class="full-btn" @click="handleAdminToggleTop">
                 {{ detail.isTop ? '取消置顶' : '一键置顶' }}
               </el-button>
-              <el-button type="danger" class="full-btn mt-10" @click="handleAdminBan">
+              <el-button type="danger" class="full-btn" @click="handleAdminBan">
                 <el-icon><Remove /></el-icon> 违规下架帖子
               </el-button>
-              <el-button type="primary" plain class="full-btn mt-10" @click="handleContact">私聊联系</el-button>
+              <el-button type="primary" plain class="full-btn" @click="handleContact">私聊联系</el-button>
             </div>
 
-            <el-button v-else type="primary" class="full-btn" @click="handleContact">私聊联系</el-button>
+            <div v-else class="normal-actions">
+              <el-button v-if="detail.hasSecureCheck && !detail.contactInfo" type="success" class="full-btn" @click="verifyDialogVisible = true">
+                 <el-icon><Stamp /></el-icon> 申请认领
+              </el-button>
+              
+              <el-button v-if="detail.hasSecureCheck && detail.contactInfo" type="success" plain class="full-btn" @click="showContactInfo">
+                 <el-icon><Unlock /></el-icon> 已解锁联系方式
+              </el-button>
+
+              <el-button type="primary" class="full-btn" @click="handleContact">私聊联系</el-button>
+            </div>
 
           </div>
         </el-card>
@@ -164,6 +164,17 @@
         <el-button type="danger" @click="confirmReport">确认举报</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="verifyDialogVisible" title="申请认领" width="400px" destroy-on-close>
+      <div style="margin-bottom: 15px; font-weight: bold; color: #1d2129;">
+        核验问题：{{ detail.verifyQuestion || '失主未设置问题，请输入暗号' }}
+      </div>
+      <el-input v-model="verifyAnswer" placeholder="请输入你的答案" clearable @keyup.enter="handleVerifySubmit" />
+      <template #footer>
+        <el-button @click="verifyDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleVerifySubmit" :loading="verifying">提交答案</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -171,11 +182,11 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { PriceTag, Location, Warning, Top, Remove, MagicStick, Lock, Loading } from '@element-plus/icons-vue' // 🌟 引入 Loading 图标
-import { getItemDetail, deleteItem, reportItem, updateItemStatus, applyItemTop } from '@/api/item'
+import { PriceTag, Location, Warning, Top, Remove, MagicStick, Lock, Unlock, Loading, Clock, Stamp, Key } from '@element-plus/icons-vue' 
+import { getItemDetail, deleteItem, reportItem, updateItemStatus, applyItemTop, verifyItemSecure } from '@/api/item'
 import { getCommentList, addComment } from '@/api/interact'
 import { getUserInfo } from '@/api/user'
-import { banItem, toggleTopByAdmin, getItemDetailByAdmin, getUserDetailByAdmin } from '@/api/admin'
+import { banItem, toggleTopByAdmin, getItemDetailByAdmin } from '@/api/admin'
 import { marked } from 'marked'
 
 const route = useRoute()
@@ -187,11 +198,13 @@ const myRole = ref(0)
 const commentList = ref([])
 const newComment = ref('')
 
-const adminPublisherInfo = ref(null)
-
 const reportDialogVisible = ref(false)
 const selectedReasons = ref([])
 const otherReasonText = ref('')
+
+const verifyDialogVisible = ref(false)
+const verifyAnswer = ref('')
+const verifying = ref(false)
 
 const parsedAiDesc = computed(() => {
   if (!detail.value || !detail.value.aiGeneratedDesc) return ''
@@ -205,6 +218,13 @@ const getImageUrl = (url) => {
   if (!url) return 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
   return url.startsWith('http') ? url : `http://localhost:8080${url}`
 }
+
+const formatEventTime = (t) => {
+  if (!t) return '未提供'
+  return t.replace('T', ' ').substring(0, 16)
+}
+
+const formatTime = (t) => t ? t.replace('T', ' ').substring(0, 16) : ''
 
 const fetchData = async () => {
   loading.value = true
@@ -220,15 +240,6 @@ const fetchData = async () => {
       res = await getItemDetail(route.params.id)
     }
     detail.value = res.data
-
-    if (myRole.value === 1 && detail.value.userId) {
-       try {
-         const pubRes = await getUserDetailByAdmin(detail.value.userId)
-         adminPublisherInfo.value = pubRes.data
-       } catch (e) {
-         console.warn("拉取发帖人档案失败", e)
-       }
-    }
 
     const commentRes = await getCommentList(route.params.id)
     commentList.value = commentRes.data || []
@@ -247,6 +258,30 @@ const submitComment = async () => {
 const handleStatusChange = async (val) => {
   await updateItemStatus({ id: detail.value.id, status: val })
   ElMessage.success('状态已更新')
+}
+
+const handleVerifySubmit = async () => {
+  if (!verifyAnswer.value.trim()) return ElMessage.warning('请输入答案')
+  verifying.value = true
+  try {
+    const res = await verifyItemSecure(detail.value.id, verifyAnswer.value.trim())
+    detail.value.contactInfo = res.data 
+    verifyDialogVisible.value = false
+    
+    ElMessageBox.alert(`核验成功！<br/><br/>对方留下的私密联系方式为：<br/><b style="font-size:18px;color:#1e80ff;">${res.data}</b>`, '认领成功', {
+      dangerouslyUseHTMLString: true,
+      type: 'success'
+    })
+  } finally {
+    verifying.value = false
+  }
+}
+
+const showContactInfo = () => {
+  ElMessageBox.alert(`对方留下的私密联系方式为：<br/><b style="font-size:18px;color:#1e80ff;">${detail.value.contactInfo}</b>`, '已解锁的联系方式', {
+    dangerouslyUseHTMLString: true,
+    type: 'success'
+  })
 }
 
 const handleAdminBan = () => {
@@ -292,7 +327,6 @@ const handleTopApply = async () => {
 
 const goToProfile = (id) => router.push(`/profile/${id}`)
 const handleContact = () => router.push({ path: '/message', query: { targetId: detail.value.userId, targetName: detail.value.publisherNickname } })
-const formatTime = (t) => t ? t.replace('T', ' ').substring(0, 16) : ''
 
 onMounted(() => fetchData())
 </script>
@@ -301,9 +335,31 @@ onMounted(() => fetchData())
 .detail-layout { display: flex; gap: 20px; max-width: 1200px; margin: 0 auto; padding: 20px; align-items: flex-start; }
 .main-content { flex: 1; min-width: 0; }
 .side-bar { width: 300px; position: sticky; top: 20px; }
-.full-btn { width: 100%; margin-top: 10px; margin-left: 0 !important; }
-.post-title { font-size: 26px; margin: 15px 0; color: #1d2129; }
-.info-bar { display: flex; gap: 24px; padding: 16px; background: #f7f8fa; border-radius: 8px; }
+
+.owner-actions, .admin-actions, .normal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px; 
+}
+.full-btn { width: 100%; margin: 0 !important; }
+
+.post-title { font-size: 26px; margin: 15px 0 5px 0; color: #1d2129; }
+
+.secure-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #fdf6ec;
+  color: #e6a23c;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: bold;
+  margin-bottom: 12px;
+}
+
+.info-bar { display: flex; flex-wrap: wrap; gap: 24px; padding: 16px; background: #f7f8fa; border-radius: 8px; }
+.info-item { display: flex; align-items: center; gap: 4px; color: #4e5969; font-size: 15px; }
 .desc-content { font-size: 16px; line-height: 1.8; color: #4e5969; margin: 20px 0; white-space: pre-wrap; }
 
 .ai-desc-container {
@@ -322,8 +378,6 @@ onMounted(() => fetchData())
   gap: 6px;
   font-size: 15px;
 }
-
-/* 🌟 AI 生成中的占位提示样式 */
 .generating-text {
   color: #909399;
   font-size: 14px;
@@ -349,13 +403,6 @@ onMounted(() => fetchData())
   gap: 6px;
   font-size: 16px;
 }
-.secure-subtitle {
-  font-size: 13px;
-  font-weight: bold;
-  color: #606266;
-  margin-bottom: 8px;
-}
-.mb-15 { margin-bottom: 15px; }
 
 .markdown-body :deep(p) { line-height: 1.6; color: #4e5969; margin-bottom: 8px; font-size: 15px; }
 .markdown-body :deep(ul), .markdown-body :deep(ol) { padding-left: 20px; margin-bottom: 10px; color: #4e5969; line-height: 1.6;}
@@ -364,6 +411,5 @@ onMounted(() => fetchData())
 
 .pointer { cursor: pointer; transition: opacity 0.2s; }
 .pointer:hover { opacity: 0.8; }
-.mt-10 { margin-top: 10px; }
 .ml-10 { margin-left: 10px; }
 </style>

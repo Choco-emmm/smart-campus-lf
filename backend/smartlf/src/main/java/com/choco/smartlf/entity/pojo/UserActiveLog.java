@@ -15,6 +15,8 @@ public class UserActiveLog {
     private Long id;
     @Schema(description="活跃用户ID")
     private Long userId;
+    @Schema(description="活跃的身份")
+    private Integer role;
     @Schema(description="具体活跃时间点（B+树索引）")
     private LocalDateTime activeTime;
 }

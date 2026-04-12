@@ -40,15 +40,16 @@
 
       <div class="feed-list" v-loading="loading">
         <el-empty v-if="itemList.length === 0" description="没有找到匹配的内容" />
+        
         <div v-for="item in itemList" :key="item.id" class="post-item" @click="goToDetail(item.id)">
           <span class="meta-time">{{ formatTime(item.createTime) }}</span>
+          
           <div class="post-content">
             <div class="post-meta">
               <el-tag :type="item.type === 0 ? 'danger' : 'success'" size="small" effect="dark">{{ item.type === 0 ? '丢失' : '拾取' }}</el-tag>
               <el-tag :type="getStatusType(item.status)" size="small" class="ml-5">{{ getStatusText(item.status) }}</el-tag>
               <el-tag v-if="item.isTop === 1" type="warning" size="small" effect="plain" class="ml-5"><el-icon><Top /></el-icon> 置顶</el-tag>
               <el-tag v-if="item.role === 1" type="warning" size="small" effect="dark" class="ml-5">官方</el-tag>
-              <span class="meta-name" @click.stop="goToProfile(item.userId)">{{ item.publisherNickname }}</span>
             </div>
             <h3 class="post-title">{{ item.publicDesc }}</h3>
             <div class="post-info">
@@ -56,6 +57,7 @@
               <span class="ml-10"><el-icon><Location /></el-icon> {{ item.location }}</span>
             </div>
           </div>
+          
           <div class="post-thumb" v-if="item.coverImage && item.coverImage.trim() !== ''">
             <el-image :src="getImageUrl(item.coverImage)" fit="cover" class="thumb-img" />
           </div>
@@ -122,7 +124,7 @@ const getStatusType = (s) => s === 1 ? 'warning' : (s === 2 ? 'info' : 'primary'
 const getImageUrl = (url) => {
   if (!url) return 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
   if (url.startsWith('http')) return url
-  return `http://localhost:8080${url}` // 🌟 保持与 request.js 端口一致
+  return `http://localhost:8080${url}` 
 }
 
 const fetchData = async () => {
@@ -136,7 +138,6 @@ const fetchData = async () => {
   }
 }
 
-// 🌟 核心修复：任何搜索动作触发时，先强制组装地址
 const handleFilterChange = () => {
   let base = (searchLocationPath.value && searchLocationPath.value.length) ? searchLocationPath.value.join('-') : ''
   if (base === '其他') {
@@ -144,11 +145,10 @@ const handleFilterChange = () => {
   } else if (base) {
     queryParams.location = searchLocationDetail.value ? `${base}-${searchLocationDetail.value}` : base
   } else {
-    // 🌟 如果完全没选左边的地址框，只填了右边详细地址
     queryParams.location = searchLocationDetail.value || ''
   }
 
-  queryParams.page = 1 // 重置页码
+  queryParams.page = 1
   fetchData()
 }
 
@@ -157,8 +157,11 @@ const handleTabChange = (val) => {
   handleFilterChange()
 }
 
-const goToDetail = (id) => router.push(`/item/${id}`)
-const goToProfile = (id) => router.push(`/profile/${id}`)
+const goToDetail = (id) => {
+  if (!id) return;
+  router.push(`/item/${id}`)
+}
+
 const formatTime = (t) => t ? t.split('T')[0] : ''
 
 onMounted(() => fetchData())
@@ -175,16 +178,19 @@ onMounted(() => fetchData())
 .ml-10 { margin-left: 10px; }
 .ml-5 { margin-left: 5px; }
 
-.post-item { display: flex; justify-content: space-between; padding: 20px; border-bottom: 1px solid #f0f0f0; cursor: pointer; transition: all 0.2s; position: relative; }
+.post-item { display: flex; justify-content: space-between; padding: 20px; border-bottom: 1px solid #f0f0f0; transition: all 0.2s; position: relative; cursor: pointer; }
 .post-item:hover { background: #fafafa; }
 .meta-time { position: absolute; top: 20px; right: 20px; font-size: 13px; color: #86909c; }
+
 .post-content { flex: 1; min-width: 0; padding-right: 120px; }
 .post-meta { display: flex; align-items: center; margin-bottom: 10px; font-size: 13px; }
-.meta-name { margin-left: 10px; color: #4e5969; font-weight: 500; }
-.post-title { margin: 0 0 10px 0; font-size: 17px; font-weight: 600; color: #1d2129; }
+.post-title { margin: 0 0 10px 0; font-size: 17px; font-weight: 600; color: #1d2129; transition: color 0.2s; }
+.post-item:hover .post-title { color: #1e80ff; }
 .post-info { font-size: 13px; color: #86909c; display: flex; align-items: center; }
+
 .post-thumb { margin-left: 20px; width: 140px; height: 90px; border-radius: 6px; overflow: hidden; flex-shrink: 0; margin-top: 25px; }
-.thumb-img { width: 100%; height: 100%; }
+.thumb-img { width: 100%; height: 100%; transition: transform 0.3s; }
+.post-item:hover .thumb-img { transform: scale(1.05); }
 
 .side-bar { width: 300px; flex-shrink: 0; }
 .side-card { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
