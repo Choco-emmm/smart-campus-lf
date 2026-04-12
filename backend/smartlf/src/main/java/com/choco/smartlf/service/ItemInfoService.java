@@ -48,4 +48,6 @@ public interface ItemInfoService extends IService<ItemInfo> {
     ItemUpdateDTO getEditEcho(Long id);
 
     void toggleTopByAdmin(Long itemId, Integer isTop);
+
+    IPage<ItemListVO> othersPublishPage(Long userId, Integer pageNum, Integer pageSize);
 }

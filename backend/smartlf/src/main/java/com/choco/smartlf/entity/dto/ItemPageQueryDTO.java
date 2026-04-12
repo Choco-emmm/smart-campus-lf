@@ -15,7 +15,7 @@ public class ItemPageQueryDTO {
     @Schema(description = "物品类型 (0:丢失, 1:拾取)")
     private Integer type;
 
-    @Schema(description = "搜索关键词 (匹配公开字或物品名称)")
+    @Schema(description = "搜索关键词 (匹配帖子标题或物品名称)")
     private String keyword;
 
     @Schema(description = "物品状态 0:寻找中，1:锁定中，2:已结案")

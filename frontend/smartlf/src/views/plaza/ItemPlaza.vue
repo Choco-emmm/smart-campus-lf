@@ -33,7 +33,7 @@
             @clear="handleFilterChange"
           />
 
-          <el-input v-model="queryParams.keyword" placeholder="搜索物品名称..." class="filter-input ml-10" prefix-icon="Search" clearable @keyup.enter="handleFilterChange" />
+          <el-input v-model="queryParams.keyword" placeholder="帖子标题/物品名称..." class="filter-input ml-10" prefix-icon="Search" clearable @keyup.enter="handleFilterChange" />
           <el-button type="primary" class="ml-10" @click="handleFilterChange">搜索</el-button>
         </div>
       </div>

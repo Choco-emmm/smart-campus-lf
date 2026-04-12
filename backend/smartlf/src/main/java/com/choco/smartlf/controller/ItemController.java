@@ -108,7 +108,16 @@ public class ItemController {
         IPage<ItemListVO> pageResult = itemInfoService.myPublishPage(pageNum, pageSize);
         return Result.success(pageResult);
     }
+    @Operation(summary = "分页查询-他人的发布", description = "获取其他用户发布的所有帖子（不包含违规下架的）")
+    @GetMapping("/others-page/{userId}")
+    public Result<IPage<ItemListVO>> getOthersPage(
+            @Schema(description = "目标用户ID", required = true) @PathVariable Long userId,
+            @Schema(description = "页码", example = "1") @RequestParam(defaultValue = "1") Integer pageNum,
+            @Schema(description = "每页记录数", example = "10") @RequestParam(defaultValue = "10") Integer pageSize) {
 
+        IPage<ItemListVO> pageResult = itemInfoService.othersPublishPage(userId, pageNum, pageSize);
+        return Result.success(pageResult);
+    }
     @Operation(summary = "AI 一键生成/润色物品描述", description = "多次调用会覆盖上一次的AI生成结果")
     @PostMapping("/ai/generate-desc/{itemId}")
     public Result<String> generateAiDesc(@PathVariable Long itemId) {

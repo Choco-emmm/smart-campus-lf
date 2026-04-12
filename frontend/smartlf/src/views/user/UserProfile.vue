@@ -46,6 +46,7 @@
             <div class="post-content">
               <div class="post-meta">
                 <el-tag :type="item.type === 0 ? 'danger' : 'success'" size="small" effect="dark">{{ item.type === 0 ? '丢失' : '拾取' }}</el-tag>
+                <el-tag :type="getStatusType(item.status)" size="small" class="ml-10">{{ getStatusText(item.status) }}</el-tag>
                 <span class="meta-time">{{ formatTime(item.createTime) }}</span>
               </div>
               <h3 class="post-title">{{ item.publicDesc }}</h3>
@@ -89,14 +90,14 @@ import { Calendar, Location, Edit, Plus } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getUserProfile, getUserInfo, updateUserInfo } from '@/api/user'
 import { getItemPage, uploadImage, getMyPublishPage } from '@/api/item'
-import { updateUserStatus } from '@/api/admin' // 🌟 引入封禁接口
+import { updateUserStatus } from '@/api/admin' // 🌟 保留管理员封禁账号的接口
 
 const route = useRoute()
 const router = useRouter()
 const loading = ref(false)
 const profile = ref(null)
 const myUserId = ref(null)
-const myRole = ref(0) // 🌟 存储当前登录人的角色
+const myRole = ref(0) 
 const itemList = ref([])
 const total = ref(0)
 const editDialogVisible = ref(false)
@@ -104,6 +105,9 @@ const editForm = reactive({ nickname: '', avatarUrl: '', phone: '', email: '' })
 const listLoading = ref(false)
 const pageParams = ref({ page: 1, pageSize: 10 })
 const saving = ref(false)
+
+const getStatusText = (s) => ({ 0: '寻找中', 1: '锁定中', 2: '已结案', 3: '已下架' }[s] || '未知')
+const getStatusType = (s) => s === 1 ? 'warning' : (s === 2 ? 'info' : (s === 3 ? 'danger' : 'primary'))
 
 const getImageUrl = (url) => {
   if (!url) return 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
@@ -118,22 +122,28 @@ const fetchData = async () => {
     profile.value = res.data
     const userRes = await getUserInfo()
     myUserId.value = userRes.data.id
-    myRole.value = Number(userRes.data.role) // 🌟 获取自身角色
+    myRole.value = Number(userRes.data.role)
     fetchUserPosts()
   } finally { loading.value = false }
 }
 
+// 🌟 回滚逻辑：要么看自己的（全量），要么看别人的（仅普通公开接口，过滤下架的）
 const fetchUserPosts = async () => {
   listLoading.value = true
-  let res = (Number(route.params.id) === myUserId.value) 
-    ? await getMyPublishPage({ page: pageParams.value.page, pageSize: 10 }) 
-    : await getItemPage({ page: pageParams.value.page, pageSize: 10, userId: route.params.id })
-  itemList.value = res.data.records || []
-  total.value = res.data.total || 0
-  listLoading.value = false
+  try {
+    let res = (Number(route.params.id) === myUserId.value) 
+      ? await getMyPublishPage({ page: pageParams.value.page, pageSize: 10 }) 
+      : await getItemPage({ page: pageParams.value.page, pageSize: 10, userId: route.params.id })
+    itemList.value = res.data.records || []
+    total.value = res.data.total || 0
+  } catch (e) {
+    console.error("获取帖子失败", e)
+  } finally {
+    listLoading.value = false
+  }
 }
 
-// 🌟 管理员封禁/解封此用户
+// 🌟 管理员依然可以在主页封禁/解封该用户
 const handleStatusChange = () => {
   const isBanning = profile.value.status === 0
   const actionText = isBanning ? '封禁' : '解封'
@@ -142,7 +152,7 @@ const handleStatusChange = () => {
   ElMessageBox.confirm(`确定要${actionText}用户【${profile.value.nickname}】吗？`, '高危操作', { type: 'warning' }).then(async () => {
     await updateUserStatus(profile.value.id, targetStatus)
     ElMessage.success(`已${actionText}`)
-    fetchData() // 刷新状态
+    fetchData() 
   }).catch(() => {})
 }
 
@@ -161,12 +171,17 @@ const handleAvatarUpload = async (options) => {
 }
 
 const handleUpdateUser = async () => {
-  const res = await updateUserInfo(editForm)
-  if (res.code === 1) {
-    ElMessage.success('修改成功')
-    editDialogVisible.value = false
-    fetchData()
-    window.location.reload()
+  saving.value = true
+  try {
+    const res = await updateUserInfo(editForm)
+    if (res.code === 1) {
+      ElMessage.success('修改成功')
+      editDialogVisible.value = false
+      fetchData()
+      window.location.reload()
+    }
+  } finally {
+    saving.value = false
   }
 }
 

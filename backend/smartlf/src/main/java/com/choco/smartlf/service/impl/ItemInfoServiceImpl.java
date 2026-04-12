@@ -593,6 +593,41 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
         log.info("物品ID: {} 的置顶状态已更新为: {}", itemId, isTop);
     }
 
+    @Override
+    public IPage<ItemListVO> othersPublishPage(Long userId, Integer pageNum, Integer pageSize) {
+        // 1. 构造分页对象和查询条件
+        Page<ItemInfo> page = new Page<>(pageNum, pageSize);
+        LambdaQueryWrapper<ItemInfo> wrapper = new LambdaQueryWrapper<>();
+
+        // 🌟 核心条件：查目标用户的发布
+        wrapper.eq(ItemInfo::getUserId, userId);
+
+        // 🌟 核心拦截：绝不能查出违规下架的帖子 (status != 3)
+        wrapper.ne(ItemInfo::getStatus, ItemStatusEnum.BANNED.getCode());
+
+        // 按创建时间倒序（最新的在最上面）
+        wrapper.orderByDesc(ItemInfo::getCreateTime);
+
+        // 3. 执行查询
+        this.page(page, wrapper);
+
+        // 4. 数据转换：ItemInfo -> ItemListVO (复用已有的转换逻辑，带上封面图)
+        return page.convert(itemInfo -> {
+            ItemListVO vo = new ItemListVO();
+            BeanUtil.copyProperties(itemInfo, vo);
+
+            // 去详情表拿第一张图片当封面
+            ItemDetail detail = itemDetailService.getById(itemInfo.getId());
+            if (detail != null && StrUtil.isNotBlank(detail.getImagesUrl())) {
+                List<String> images = JSONUtil.toList(detail.getImagesUrl(), String.class);
+                if (CollUtil.isNotEmpty(images)) {
+                    vo.setCoverImage(images.getFirst());
+                }
+            }
+            return vo;
+        });
+    }
+
     private ItemDetailVO buildBaseItemDetailVO(ItemInfo itemInfo) {
         if (itemInfo == null) {
             throw new BusinessException("该失物信息不存在");
