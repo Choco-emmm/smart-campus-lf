@@ -1,12 +1,16 @@
 package com.choco.smartlf.controller;
 
 import com.choco.smartlf.entity.Result;
+import com.choco.smartlf.entity.dto.ClaimAuditDTO;
+import com.choco.smartlf.entity.dto.ClaimSubmitDTO;
 import com.choco.smartlf.entity.dto.CommentAddDTO;
 import com.choco.smartlf.entity.dto.MessageSendDTO;
 import com.choco.smartlf.entity.pojo.PrivateMessage;
 import com.choco.smartlf.entity.vo.ChatSessionVO;
+import com.choco.smartlf.entity.vo.ClaimRecordVO;
 import com.choco.smartlf.entity.vo.ItemCommentNotificationVO;
 import com.choco.smartlf.entity.vo.ItemCommentVO;
+import com.choco.smartlf.service.ClaimRecordService;
 import com.choco.smartlf.service.ItemCommentService;
 import com.choco.smartlf.service.PrivateMessageService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -25,6 +29,7 @@ public class InteractController {
 
     private final ItemCommentService itemCommentService;
     private final PrivateMessageService privateMessageService;
+    private final ClaimRecordService claimRecordService;
 
     @Operation(summary = "发表留言")
     @PostMapping("/comment/add")
@@ -68,4 +73,30 @@ public class InteractController {
         Integer unreadCount = privateMessageService.getPrivateMessageNotifications();
         return Result.success(unreadCount);
     }
+    // ================= 认领申请功能 =================
+//    @Operation(summary = "提交认领申请")
+//    @PostMapping("/claim/submit")
+//    public Result<Void> submitClaim(@Validated @RequestBody ClaimSubmitDTO dto) {
+//        claimRecordService.submitClaim(dto);
+//        return Result.success();
+//    }
+
+//    @Operation(summary = "审核认领申请")
+//    @PostMapping("/claim/audit")
+//    public Result<Void> auditClaim(@Validated @RequestBody ClaimAuditDTO dto) {
+//        claimRecordService.auditClaim(dto);
+//        return Result.success("审核操作成功");
+//    }
+//
+//    @Operation(summary = "我收到的认领申请")
+//    @GetMapping("/claim/received")
+//    public Result<List<ClaimRecordVO>> getMyReceivedClaims() {
+//        return Result.success(claimRecordService.getMyReceivedClaims());
+//    }
+//
+//    @Operation(summary = "我发出的认领申请")
+//    @GetMapping("/claim/submitted")
+//    public Result<List<ClaimRecordVO>> getMySubmittedClaims() {
+//        return Result.success(claimRecordService.getMySubmittedClaims());
+//    }
 }

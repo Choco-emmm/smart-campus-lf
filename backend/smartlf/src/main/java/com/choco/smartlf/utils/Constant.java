@@ -55,4 +55,10 @@ public class Constant {
 
     public static final String TOKEN_BANNED_VALUE = "banned";
     public static final Long TOP_END_TIME_HOURS = 24L;
+
+    /**
+     * websocket键
+     */
+    public static final String MSG_TYPE_KEY="type";
+    public static final String MSG_DATA_KEY="data";
 }

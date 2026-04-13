@@ -26,4 +26,8 @@ public class ClaimRecord {
     private LocalDateTime createTime;
     @Schema(description="最后修改时间")
     private LocalDateTime updateTime;
+    @Schema(description="补充问题")
+    private String supplementQuestion;
+    @Schema(description="补充答案")
+    private String supplementAnswer;
 }

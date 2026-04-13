@@ -4,8 +4,10 @@ import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.choco.smartlf.entity.dto.MessageSendDTO;
 import com.choco.smartlf.entity.pojo.PrivateMessage;
+import com.choco.smartlf.enums.WebSocketMsgTypeEnum;
 import com.choco.smartlf.service.PrivateMessageService;
 import com.choco.smartlf.service.impl.TokenAuthService;
+import com.choco.smartlf.utils.Constant;
 import io.jsonwebtoken.Claims;
 import jakarta.websocket.*;
 import jakarta.websocket.server.PathParam;
@@ -61,10 +63,10 @@ public class ChatWebSocketServer {
     public void onMessage(String message, Session session) {
         try {
             JSONObject json = JSONUtil.parseObj(message);
-            String type = json.getStr("type");
+            String type = json.getStr(Constant.MSG_TYPE_KEY);
 
             // 1. 焦点上报
-            if ("active_window".equals(type)) {
+            if (WebSocketMsgTypeEnum.ACTIVE_WINDOW.getType().equals(type)) {
                 Long targetId = json.getLong("targetId");
                 if (targetId == null) {
                     ACTIVE_WINDOWS.remove(this.currentUserId);
@@ -75,7 +77,7 @@ public class ChatWebSocketServer {
             }
 
             // 2. 聊天消息
-            if ("chat".equals(type)) {
+            if (WebSocketMsgTypeEnum.CHAT.getType().equals(type)) {
                 MessageSendDTO messageDTO = JSONUtil.toBean(json, MessageSendDTO.class);
                 if (messageDTO.getContent() == null || messageDTO.getContent().trim().isEmpty()) {
                     return;
@@ -89,8 +91,8 @@ public class ChatWebSocketServer {
                 if (isOnline(messageDTO.getReceiverId())) {
                     // 🌟 核心修改：包装成带 type 的标准协议发送给前端
                     JSONObject pushData = new JSONObject();
-                    pushData.set("type", "chat");
-                    pushData.set("data", savedMessage);
+                    pushData.set(Constant.MSG_TYPE_KEY, WebSocketMsgTypeEnum.CHAT);
+                    pushData.set(Constant.MSG_DATA_KEY, savedMessage);
                     pushMessage(messageDTO.getReceiverId(), pushData);
                 }
             }
@@ -126,7 +128,15 @@ public class ChatWebSocketServer {
     public static void pushNotice(Long targetUserId) {
         if (isOnline(targetUserId)) {
             JSONObject pushData = new JSONObject();
-            pushData.set("type", "notice");
+            pushData.set(Constant.MSG_TYPE_KEY, WebSocketMsgTypeEnum.NOTICE);
+            pushMessage(targetUserId, pushData);
+        }
+    }
+
+    public static void pushClaimNotice(Long targetUserId) {
+        if (isOnline(targetUserId)) {
+            JSONObject pushData = new JSONObject();
+            pushData.set(Constant.MSG_TYPE_KEY, WebSocketMsgTypeEnum.CLAIM); // 🌟 专门用于认领申请状态变更的通知
             pushMessage(targetUserId, pushData);
         }
     }
