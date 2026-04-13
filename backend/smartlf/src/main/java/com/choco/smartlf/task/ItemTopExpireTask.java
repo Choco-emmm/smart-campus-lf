@@ -20,9 +20,9 @@ public class ItemTopExpireTask {
     private final ItemInfoService itemInfoService;
 
     /**
-     * 每 1 分钟执行一次扫描 (60000 毫秒)
+     * 每 10 分钟执行一次扫描 (600000 毫秒)
      */
-    @Scheduled(fixedRate = 60000)
+    @Scheduled(fixedRate = 600000)
     public void expireTopItems() {
         log.info("定时任务触发：开始扫描过期的置顶帖子...");
         // 构造更新条件：目前是置顶状态 (is_top = 1)，且过期时间早于当前时间
