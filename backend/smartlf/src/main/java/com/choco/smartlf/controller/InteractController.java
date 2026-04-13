@@ -77,7 +77,6 @@ public class InteractController {
         claimRecordService.submitClaim(dto);
         return Result.success();
     }
-    // src/main/java/com/choco/smartlf/controller/InteractController.java
 
     @Operation(summary = "认领者提交补充证据")
     @PostMapping("/claim/supplement")
@@ -86,12 +85,12 @@ public class InteractController {
         return Result.success();
     }
 
-//    @Operation(summary = "审核认领申请")
-//    @PostMapping("/claim/audit")
-//    public Result<Void> auditClaim(@Validated @RequestBody ClaimAuditDTO dto) {
-//        claimRecordService.auditClaim(dto);
-//        return Result.success("审核操作成功");
-//    }
+    @Operation(summary = "审核认领申请")
+    @PostMapping("/claim/audit")
+    public Result<Void> auditClaim(@Validated @RequestBody ClaimAuditDTO dto) {
+        claimRecordService.auditClaim(dto);
+        return Result.success();
+    }
 //
 //    @Operation(summary = "我收到的认领申请")
 //    @GetMapping("/claim/received")

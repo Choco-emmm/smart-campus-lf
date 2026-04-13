@@ -61,4 +61,19 @@ public class Constant {
      */
     public static final String MSG_TYPE_KEY="type";
     public static final String MSG_DATA_KEY="data";
+
+    /**
+     * Redis中存储一次性验证码的key前缀
+     */
+    public static final String CAPTCHA_PREFIX = "captcha:";
+
+    /**
+     * 一次性验证码的长度
+     */
+    public static final Integer CAPTCHA_LENGTH = 6;
+
+    /**
+     * 验证码过期时间
+     */
+    public static final Long CAPTCHA_EXPIRATION = 3L;
 }
