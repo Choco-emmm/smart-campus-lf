@@ -1,6 +1,7 @@
 package com.choco.smartlf.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.choco.smartlf.entity.dto.ClaimSubmitDTO;
 import com.choco.smartlf.entity.pojo.ClaimRecord;
 
 /**
@@ -10,4 +11,5 @@ import com.choco.smartlf.entity.pojo.ClaimRecord;
 */
 public interface ClaimRecordService extends IService<ClaimRecord> {
 
+    void submitClaim(ClaimSubmitDTO dto);
 }

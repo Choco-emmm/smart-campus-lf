@@ -10,5 +10,4 @@ public class ClaimSubmitDTO {
     private Long itemId;
     @NotBlank(message = "核验答案不能为空")
     private String claimAnswer;
-    private String proofImagesUrl; // 预留的补充证据图片JSON，可不传
 }

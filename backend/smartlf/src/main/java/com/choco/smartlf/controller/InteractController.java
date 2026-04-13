@@ -74,12 +74,12 @@ public class InteractController {
         return Result.success(unreadCount);
     }
     // ================= 认领申请功能 =================
-//    @Operation(summary = "提交认领申请")
-//    @PostMapping("/claim/submit")
-//    public Result<Void> submitClaim(@Validated @RequestBody ClaimSubmitDTO dto) {
-//        claimRecordService.submitClaim(dto);
-//        return Result.success();
-//    }
+    @Operation(summary = "提交认领申请")
+    @PostMapping("/claim/submit")
+    public Result<Void> submitClaim(@Validated @RequestBody ClaimSubmitDTO dto) {
+        claimRecordService.submitClaim(dto);
+        return Result.success();
+    }
 
 //    @Operation(summary = "审核认领申请")
 //    @PostMapping("/claim/audit")
