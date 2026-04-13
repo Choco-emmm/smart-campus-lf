@@ -1,20 +1,19 @@
 package com.choco.smartlf.service;
 
+import com.baomidou.mybatisplus.extension.service.IService;
 import com.choco.smartlf.entity.dto.MessageSendDTO;
 import com.choco.smartlf.entity.pojo.PrivateMessage;
-import com.baomidou.mybatisplus.extension.service.IService;
 import com.choco.smartlf.entity.vo.ChatSessionVO;
 
 import java.util.List;
 
 /**
-* @author renpe
-* @description 针对表【private_message(私信表)】的数据库操作Service
-* @createDate 2026-04-10 12:55:01
-*/
+ * @author renpe
+ * @description 针对表【private_message(私信表)】的数据库操作Service
+ */
 public interface PrivateMessageService extends IService<PrivateMessage> {
 
-    void sendMessage(MessageSendDTO dto);
+    PrivateMessage sendMessage(MessageSendDTO dto, Long senderId, boolean isReceiverOnline);
 
     List<PrivateMessage> getChatHistory(Long targetUserId);
 

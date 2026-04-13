@@ -27,8 +27,4 @@ export function getChatHistory(targetUserId) {
     return request({ url: `/interact/message/history/${targetUserId}`, method: 'get' })
 }
 
-// 发送私信
-export function sendPrivateMessage(data) {
-    // data: { receiverId, content }
-    return request({ url: '/interact/message/send', method: 'post', data: data })
-}
+// 注：sendPrivateMessage 接口已被移除，现在发送私信完全通过 WebSocket 实时传输完成

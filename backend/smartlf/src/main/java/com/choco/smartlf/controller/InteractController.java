@@ -40,12 +40,7 @@ public class InteractController {
         return Result.success(list);
     }
 
-    @Operation(summary = "发送私信")
-    @PostMapping("/message/send")
-    public Result<Void> sendMessage(@Validated @RequestBody MessageSendDTO dto) {
-        privateMessageService.sendMessage(dto);
-        return Result.success();
-    }
+
 
     @Operation(summary = "获取与某人的聊天记录 (会自动将对方发给我的未读消息设为已读)")
     @GetMapping("/message/history/{targetUserId}")

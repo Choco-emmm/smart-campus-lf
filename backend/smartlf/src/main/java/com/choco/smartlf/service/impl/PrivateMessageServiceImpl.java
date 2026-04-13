@@ -11,8 +11,8 @@ import com.choco.smartlf.entity.pojo.User;
 import com.choco.smartlf.entity.vo.ChatSessionVO;
 import com.choco.smartlf.entity.vo.UserInfoVO;
 import com.choco.smartlf.enums.ReadStatusEnum;
-import com.choco.smartlf.service.PrivateMessageService;
 import com.choco.smartlf.mapper.PrivateMessageMapper;
+import com.choco.smartlf.service.PrivateMessageService;
 import com.choco.smartlf.service.UserService;
 import com.choco.smartlf.utils.UserContext;
 import lombok.RequiredArgsConstructor;
@@ -31,26 +31,39 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class PrivateMessageServiceImpl extends ServiceImpl<PrivateMessageMapper, PrivateMessage>
-    implements PrivateMessageService{
+    implements PrivateMessageService {
 
     private final UserService userService;
-
-
+    // 🌟 HTTP 接口调用的方法
     @Override
-    public void sendMessage(MessageSendDTO dto) {
-        //先确认一下能不能找到传入的id的用户
+    public PrivateMessage sendMessage(MessageSendDTO dto, Long senderId, boolean isReceiverOnline) {
+        if (senderId == null) {
+            throw new RuntimeException("发送人ID不能为空");
+        }
+
         UserInfoVO userInfo = userService.getUserInfo(dto.getReceiverId());
         if(userInfo == null){
             throw new RuntimeException("接收人不存在");
         }
-        //获取当前用户的id
-        Long senderId = UserContext.getUserId();
+
         PrivateMessage privateMessage = new PrivateMessage();
         BeanUtil.copyProperties(dto, privateMessage);
         privateMessage.setSenderId(senderId);
+
+        // 🌟 核心逻辑：在线直接标为已读 (1)，离线标为未读 (0)
+        if (isReceiverOnline) {
+            privateMessage.setIsRead(ReadStatusEnum.READ.getCode());
+        } else {
+            privateMessage.setIsRead(ReadStatusEnum.UNREAD.getCode());
+        }
+
         save(privateMessage);
-        log.info("发送私信成功: {}", privateMessage);
+        log.info("发送私信成功，落库状态(1已读/0未读): {}", privateMessage.getIsRead());
+
+        return privateMessage;
     }
+
+
 
     @Override
     public List<PrivateMessage> getChatHistory(Long targetUserId) {

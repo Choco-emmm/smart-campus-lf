@@ -73,6 +73,7 @@ public class TokenAuthService {
                 JSONUtil.toJsonStr(userActiveLog)
         );
 
+        log.info("用户 {} 鉴权成功，角色：{}", userId, role);
         return claims; // 返回解析好的数据供后续使用
     }
 }
