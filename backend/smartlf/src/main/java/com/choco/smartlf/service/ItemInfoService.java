@@ -41,7 +41,7 @@ public interface ItemInfoService extends IService<ItemInfo> {
 
     AdminItemDetailVO getItemDetailByAdmin(Long itemId);
 
-    String generateAIDesc(Long itemId);
+    void generateAIDesc(Long itemId);
 
     void generateAdminSummary();
 

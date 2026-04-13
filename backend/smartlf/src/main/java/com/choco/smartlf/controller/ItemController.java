@@ -121,8 +121,8 @@ public class ItemController {
     @Operation(summary = "AI 一键生成/润色物品描述", description = "多次调用会覆盖上一次的AI生成结果")
     @PostMapping("/ai/generate-desc/{itemId}")
     public Result<String> generateAiDesc(@PathVariable Long itemId) {
-        String aiDesc = itemInfoService.generateAIDesc(itemId);
-        return Result.success(aiDesc);
+        itemInfoService.generateAIDesc(itemId);
+        return Result.success("AI 润色任务已提交后台处理。生成完成后系统将发送通知提示您！");
     }
 
     @Operation(summary = "获取修改帖子时的回显数据", description = "包含敏感的暗号数据，仅限发帖人调用")

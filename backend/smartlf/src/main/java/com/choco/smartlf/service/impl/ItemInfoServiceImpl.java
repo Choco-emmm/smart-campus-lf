@@ -26,6 +26,8 @@ import com.choco.smartlf.utils.UserContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
@@ -37,6 +39,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -61,6 +64,10 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
     private final ItemInfoMapper itemInfoMapper;
     private final ChatClient polishClient;
     private final StringRedisTemplate stringRedisTemplate;
+
+    @Autowired
+    @Qualifier("aiExecutor")
+    private Executor aiExecutor;
 
     @Transactional(rollbackFor = Exception.class)
     @Override
@@ -445,10 +452,12 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public String generateAIDesc(Long itemId) {
+    public void generateAIDesc(Long itemId) {
+        // 🌟 1. 主线程：在把活儿交给异步线程前，赶紧把当前用户的 ID 拿出来存好！
+        // （防止异步线程里拿不到 UserContext 导致空指针）
         Long currentUserId = UserContext.getUserId();
 
-        // 1. 校验物品和权限
+        // 校验物品和权限
         ItemInfo item = this.getById(itemId);
         if (item == null) {
             throw new BusinessException("物品不存在");
@@ -457,75 +466,78 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
             throw new BusinessException(ResultCodeEnum.FORBIDDEN, "只能让AI润色自己的帖子！");
         }
 
-        // 2. 构建给 AI 的提示词 (Prompt)
+        // 构建给 AI 的提示词
         String typeStr = Objects.equals(item.getType(), ItemTypeEnum.LOST.getCode()) ? ItemTypeEnum.LOST.getDescription() : ItemTypeEnum.FOUND.getDescription();
         String promptText = String.format(
                 AIConstant.PROMPT_TEMPLATE_POLISH,
                 typeStr, item.getItemName(), item.getLocation(), item.getPublicDesc()
         );
 
-        log.info("开始调用本地大模型生成描述...");
+        log.info("【主线程】已接收 AI 润色请求，提交至后台排队处理。物品ID: {}", itemId);
 
-        // 🌟 3. 调用 Spring AI 生成结果
-        String aiResult = polishClient.prompt()
-                .user(promptText)
-                .call()
-                .content();
+        // 🌟 2. 异步：将耗时的调用丢给 aiExecutor 线程池
+        java.util.concurrent.CompletableFuture.runAsync(() -> {
+            try {
+                log.info("【异步线程】开始调用本地大模型生成描述...");
+                String aiResult = polishClient.prompt()
+                        .user(promptText)
+                        .call()
+                        .content();
 
-        if (StrUtil.isBlank(aiResult)) {
-            throw new BusinessException("AI 生成失败，大模型没有返回内容");
-        }
+                if (StrUtil.isNotBlank(aiResult)) {
+                    // 3. 落库：将结果覆盖到旧数据上
+                    ItemDetail itemDetail = itemDetailService.getById(itemId);
+                    if (itemDetail != null) {
+                        itemDetail.setAiGeneratedDesc(aiResult);
+                        itemDetailService.updateById(itemDetail);
+                        log.info("【异步线程】AI 描述生成并保存成功，物品ID: {}", itemId);
 
-        // 4. 持久化到数据库 (覆盖旧结果)
-        ItemDetail itemDetail = itemDetailService.getById(itemId);
-        if (itemDetail != null) {
-            itemDetail.setAiGeneratedDesc(aiResult);
-            itemDetailService.updateById(itemDetail);
-        }
+                    }
+                }
+            } catch (Exception e) {
+                log.error("【异步线程】AI 描述生成彻底失败，物品ID: {}", itemId, e);
+            }
+        }, aiExecutor);
 
-        log.info("AI 描述生成并保存成功，物品ID: {}", itemId);
-        return aiResult;
+        // 主线程走到这里（耗时不到 1 毫秒）直接结束，瞬间返回给 Controller！
     }
 
     @Override
     public void generateAdminSummary() {
-        // 1. 去数据库查近 7 天的数据
         LocalDateTime sevenDaysAgo = LocalDateTime.now().minusDays(7);
         List<ItemInfo> recentItems = this.list(new LambdaQueryWrapper<ItemInfo>()
                 .ge(ItemInfo::getCreateTime, sevenDaysAgo));
 
         if (recentItems.isEmpty()) {
-
             return;
         }
 
-        // 2. 我们自己先帮 AI 算好账
-        // 统计一下大家丢的最多的都是什么东西（比如：雨伞=5次，校园卡=3次）
         Map<String, Long> nameCountMap = recentItems.stream()
                 .collect(Collectors.groupingBy(ItemInfo::getItemName, Collectors.counting()));
-
-        // 统计一下哪里最容易丢东西（比如：食堂=4次，图书馆=2次）
         Map<String, Long> locationCountMap = recentItems.stream()
                 .collect(Collectors.groupingBy(ItemInfo::getLocation, Collectors.counting()));
 
-        // 3. 把算好的账本交给 AI
         String rawDataStr = String.format(AIConstant.RAW_DATA_TEMPLATE, recentItems.size(), nameCountMap.toString(), locationCountMap.toString());
-
         String promptText = AIConstant.getAdminSummaryPrompt(rawDataStr);
 
-        // 4. 发给 AI 并拿到报告
-        String content = polishClient.prompt()
-                .user(promptText)
-                .call()
-                .content();
+        log.info("【主线程】准备提交管理员 AI 周报任务...");
 
-        if (content == null) {
-            throw new BusinessException("AI 描述生成失败，大模型没有返回内容");
-        }
-        //存入redis
-        stringRedisTemplate.opsForValue().set(AIConstant.SUMMARY_KEY, content, AIConstant.SUMMARY_EXPIRE_DAYS, TimeUnit.DAYS);
+        // 🌟 同样采用异步化处理，防止卡死定时任务调度器
+        java.util.concurrent.CompletableFuture.runAsync(() -> {
+            try {
+                String content = polishClient.prompt()
+                        .user(promptText)
+                        .call()
+                        .content();
 
-        log.info("AI 本周安保报告已生成并存入 Redis！");
+                if (content != null) {
+                    stringRedisTemplate.opsForValue().set(AIConstant.SUMMARY_KEY, content, AIConstant.SUMMARY_EXPIRE_DAYS, java.util.concurrent.TimeUnit.DAYS);
+                    log.info("【异步线程】AI 本周安保报告已生成并存入 Redis！");
+                }
+            } catch (Exception e) {
+                log.error("【异步线程】AI 报告生成失败", e);
+            }
+        }, aiExecutor);
     }
 
     @Override

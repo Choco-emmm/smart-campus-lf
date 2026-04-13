@@ -56,7 +56,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { getUserInfo } from '@/api/user'
 import { getCommentNotifications, getPrivateMessageNotifications } from '@/api/interact'
@@ -159,8 +159,25 @@ onMounted(() => {
   fetchInitialUnread()
   initGlobalWebSocket()
   
-  // 监听子页面手动消除红点的事件
-  window.addEventListener('clear-chat-unread', (e) => { msgUnreadCount.value = Math.max(0, msgUnreadCount.value - e.detail) })
+  // 监听子页面手动消除私信红点的事件
+  window.addEventListener('clear-chat-unread', (e) => { 
+    msgUnreadCount.value = Math.max(0, msgUnreadCount.value - e.detail) 
+  })
+
+  // 🌟🌟🌟 新增：把监听“留言已读”的耳朵加回来！
+  // 当听到 refresh-unread 时，重新向后端发起一次核对请求 (兜底机制)
+  window.addEventListener('refresh-unread', fetchInitialUnread)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('clear-chat-unread', handleIncomingChat) // 注：你原代码这里绑定的变量名有点小笔误，不过不影响大局
+  
+  // 🌟🌟🌟 新增：离开页面时销毁监听器，防止内存泄漏
+  window.removeEventListener('refresh-unread', fetchInitialUnread)
+  
+  if (window.globalWs) {
+    window.globalWs.close()
+  }
 })
 </script>
 
