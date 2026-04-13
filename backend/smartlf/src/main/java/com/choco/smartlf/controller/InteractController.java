@@ -1,10 +1,7 @@
 package com.choco.smartlf.controller;
 
 import com.choco.smartlf.entity.Result;
-import com.choco.smartlf.entity.dto.ClaimAuditDTO;
-import com.choco.smartlf.entity.dto.ClaimSubmitDTO;
-import com.choco.smartlf.entity.dto.CommentAddDTO;
-import com.choco.smartlf.entity.dto.MessageSendDTO;
+import com.choco.smartlf.entity.dto.*;
 import com.choco.smartlf.entity.pojo.PrivateMessage;
 import com.choco.smartlf.entity.vo.ChatSessionVO;
 import com.choco.smartlf.entity.vo.ClaimRecordVO;
@@ -78,6 +75,14 @@ public class InteractController {
     @PostMapping("/claim/submit")
     public Result<Void> submitClaim(@Validated @RequestBody ClaimSubmitDTO dto) {
         claimRecordService.submitClaim(dto);
+        return Result.success();
+    }
+    // src/main/java/com/choco/smartlf/controller/InteractController.java
+
+    @Operation(summary = "认领者提交补充证据")
+    @PostMapping("/claim/supplement")
+    public Result<Void> supplementClaim(@Validated @RequestBody ClaimSupplementDTO dto) {
+        claimRecordService.supplementClaim(dto);
         return Result.success();
     }
 
