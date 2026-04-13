@@ -5,6 +5,9 @@ import com.choco.smartlf.entity.dto.ClaimAuditDTO;
 import com.choco.smartlf.entity.dto.ClaimSubmitDTO;
 import com.choco.smartlf.entity.dto.ClaimSupplementDTO;
 import com.choco.smartlf.entity.pojo.ClaimRecord;
+import com.choco.smartlf.entity.vo.ClaimRecordVO;
+
+import java.util.List;
 
 /**
 * @author Choco
@@ -18,4 +21,8 @@ public interface ClaimRecordService extends IService<ClaimRecord> {
     void supplementClaim(ClaimSupplementDTO dto);
 
     void auditClaim(ClaimAuditDTO dto);
+
+    List<ClaimRecordVO> getMyReceivedClaims();
+
+    List<ClaimRecordVO> getMySubmittedClaims();
 }

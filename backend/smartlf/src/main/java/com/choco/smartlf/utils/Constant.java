@@ -73,7 +73,11 @@ public class Constant {
     public static final Integer CAPTCHA_LENGTH = 6;
 
     /**
-     * 验证码过期时间
+     * 验证码过期时间（单位是天）
      */
     public static final Long CAPTCHA_EXPIRATION = 3L;
+    /**
+     * 验证码已过期
+     */
+    public static final String CAPTCHA_EXPIRED = "已过期失效";
 }

@@ -91,16 +91,16 @@ public class InteractController {
         claimRecordService.auditClaim(dto);
         return Result.success();
     }
-//
-//    @Operation(summary = "我收到的认领申请")
-//    @GetMapping("/claim/received")
-//    public Result<List<ClaimRecordVO>> getMyReceivedClaims() {
-//        return Result.success(claimRecordService.getMyReceivedClaims());
-//    }
-//
-//    @Operation(summary = "我发出的认领申请")
-//    @GetMapping("/claim/submitted")
-//    public Result<List<ClaimRecordVO>> getMySubmittedClaims() {
-//        return Result.success(claimRecordService.getMySubmittedClaims());
-//    }
+
+    @Operation(summary = "我收到的认领申请")
+    @GetMapping("/claim/received")
+    public Result<List<ClaimRecordVO>> getMyReceivedClaims() {
+        return Result.success(claimRecordService.getMyReceivedClaims());
+    }
+
+    @Operation(summary = "我发出的认领申请")
+    @GetMapping("/claim/submitted")
+    public Result<List<ClaimRecordVO>> getMySubmittedClaims() {
+        return Result.success(claimRecordService.getMySubmittedClaims());
+    }
 }

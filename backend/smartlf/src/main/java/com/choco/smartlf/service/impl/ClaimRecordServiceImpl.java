@@ -1,5 +1,6 @@
 package com.choco.smartlf.service.impl;
 
+import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.RandomUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -11,6 +12,8 @@ import com.choco.smartlf.entity.dto.ClaimSupplementDTO;
 import com.choco.smartlf.entity.pojo.ClaimRecord;
 import com.choco.smartlf.entity.pojo.ItemInfo;
 import com.choco.smartlf.entity.pojo.ItemSecure;
+import com.choco.smartlf.entity.pojo.User;
+import com.choco.smartlf.entity.vo.ClaimRecordVO;
 import com.choco.smartlf.enums.ClaimAuditActionEnum;
 import com.choco.smartlf.enums.ClaimStatusEnum;
 import com.choco.smartlf.enums.ItemStatusEnum;
@@ -19,15 +22,19 @@ import com.choco.smartlf.mapper.ClaimRecordMapper;
 import com.choco.smartlf.service.ClaimRecordService;
 import com.choco.smartlf.service.ItemInfoService;
 import com.choco.smartlf.service.ItemSecureService;
+import com.choco.smartlf.service.UserService;
 import com.choco.smartlf.utils.Constant;
 import com.choco.smartlf.utils.UserContext;
 import com.choco.smartlf.websocket.ChatWebSocketServer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeanUtils;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -45,6 +52,9 @@ public class ClaimRecordServiceImpl extends ServiceImpl<ClaimRecordMapper, Claim
     private final ItemInfoService itemInfoService;
     private final ItemSecureService itemSecureService;
     private final StringRedisTemplate stringRedisTemplate;
+
+    private final UserService userService;
+
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -226,6 +236,7 @@ public class ClaimRecordServiceImpl extends ServiceImpl<ClaimRecordMapper, Claim
                 throw new BusinessException("要求补充证据时，必须填写追问问题");
             }
             record.setStatus(ClaimStatusEnum.REQUIRE_SUPPLEMENT.getCode());
+           //每个申请的核验问题可以是不一样的，且后台没记录，纯发帖人自己审核
             record.setSupplementQuestion(dto.getSupplementQuestion());
         }
 
@@ -243,6 +254,120 @@ public class ClaimRecordServiceImpl extends ServiceImpl<ClaimRecordMapper, Claim
 
         // 7. 神级闭环：通知申请人（您的申请有结果啦！）
         ChatWebSocketServer.pushClaimNotice(record.getApplicantId());
+    }
+
+    @Override
+    public List<ClaimRecordVO> getMyReceivedClaims() {
+        // 1. 获取当前登录用户 (我是发布者/帖主)
+        Long currentUserId = UserContext.getUserId();
+
+        // 2. 查询所有“发布者是我”的认领记录，按时间倒序（最新的在最上面）
+        List<ClaimRecord> records = this.list(new LambdaQueryWrapper<ClaimRecord>()
+                .eq(ClaimRecord::getPublisherId, currentUserId)
+                .orderByDesc(ClaimRecord::getCreateTime)
+        );
+
+        // 3. 调用公共的 VO 转换方法（传入 true 代表这是“我收到的”）
+        return convertToVOList(records, true);
+    }
+
+    @Override
+    public List<ClaimRecordVO> getMySubmittedClaims() {
+        // 1. 获取当前登录用户 (我是申请人)
+        Long currentUserId = UserContext.getUserId();
+
+        // 2. 查询所有“申请人是我”的认领记录
+        List<ClaimRecord> records = this.list(new LambdaQueryWrapper<ClaimRecord>()
+                .eq(ClaimRecord::getApplicantId, currentUserId)
+                .orderByDesc(ClaimRecord::getCreateTime)
+        );
+
+        // 3. 调用公共的 VO 转换方法（传入 false 代表这是“我发出的”）
+        return convertToVOList(records, false);
+    }
+
+    /**
+     * 将实体类列表统一转换为 VO 列表，并自动填充关联数据
+     * @param records 数据库查出来的实体列表
+     * @param isReceived true: 我是发帖人, false: 我是申请人
+     */
+    private List<ClaimRecordVO> convertToVOList(List<ClaimRecord> records, boolean isReceived) {
+        //到这的ClaimRecord要么都是我发的，要么都是我收到的
+        if (records == null || records.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        return records.stream().map(record -> {
+            ClaimRecordVO vo = new ClaimRecordVO();
+            // 将实体类中名字相同的属性拷贝到 VO 中
+            BeanUtil.copyProperties(record, vo);
+
+
+            // 1. 填充物品名称
+            ItemInfo item = itemInfoService.getById(record.getItemId());
+            if (item != null) {
+                vo.setItemName(item.getItemName());
+            }
+
+            // 2. 动态填充“对方”的信息（头像和昵称）
+            // 👉 如果是“我收到的”，对方就是申请人 (Applicant)
+            // 👉 如果是“我发出的”，对方就是帖主 (Publisher)
+            Long targetUserId = isReceived ? record.getApplicantId() : record.getPublisherId();
+            User targetUser = userService.getById(targetUserId);
+            if (targetUser != null) {
+                vo.setTargetNickname(targetUser.getNickname());
+                vo.setTargetAvatar(targetUser.getAvatarUrl());
+            }
+
+            // 3. 极致的隐私安全控制
+
+            // ① 如果该认证申请的状态是“已同意”，从redis里把验证码和ttl拉出来。
+            if (ClaimStatusEnum.APPROVED.getCode().equals(record.getStatus())) {
+                String key = Constant.CAPTCHA_PREFIX + record.getId();
+                String pickupCode = stringRedisTemplate.opsForValue().get(key);
+
+                // 获取剩余过期时间（单位：秒），这里可以直接简写为 getExpire
+                Long ttl = stringRedisTemplate.getExpire(key);
+
+                // 判断：只有查到了码，并且 ttl 大于 0（还没过期）
+                if (pickupCode != null && ttl > 0) {
+                    vo.setPickupCode(pickupCode);
+                    // 🌟 核心转换：当前时间 + 剩余秒数 = 具体的过期时间点
+                    vo.setCodeExpireTime(LocalDateTime.now().plusSeconds(ttl));
+                } else {
+                    // 如果 Redis 里拿不到，说明这 3 天已经过去了，取件码已经自动销毁了
+                    vo.setPickupCode(Constant.CAPTCHA_EXPIRED);
+                    vo.setCodeExpireTime(null);
+                }
+            }
+
+
+            // ② 查出该帖子的私密表信息（包含联系方式和自定义问题）
+            ItemSecure secure = itemSecureService.getOne(
+                    new LambdaQueryWrapper<ItemSecure>()
+                            .eq(ItemSecure::getItemId, record.getItemId())
+            );
+
+            if (secure != null) {
+                // 无论是申请人还是发帖人，VO 都可以携带这个问题（发帖人看自己设的问题，申请人看自己答的问题）
+                vo.setVerifyQuestion(secure.getVerifyQuestion());
+
+                if (!isReceived) {
+                    // 场景 A：当前用户是【申请人】 (对应：我发出的申请)
+                    // 只有在“已同意”的情况下，才向他展示帖主的私密联系方式
+                    if (ClaimStatusEnum.APPROVED.getCode().equals(record.getStatus())) {
+                        vo.setPublisherContact(secure.getPrivateContact());
+                    }
+                } else {
+                    // 场景 B：当前用户是【发帖人】 (对应：我收到的申请)
+                    // 发帖人看单子时，把自己的私密联系方式和核验答案带上
+                    vo.setPublisherContact(secure.getPrivateContact());
+                    vo.setVerifyAnswer(secure.getVerifyAnswer());
+                }
+            }
+
+            return vo;
+        }).toList();
     }
 }
 
