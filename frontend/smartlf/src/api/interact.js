@@ -28,3 +28,6 @@ export function getChatHistory(targetUserId) {
 }
 
 // 注：sendPrivateMessage 接口已被移除，现在发送私信完全通过 WebSocket 实时传输完成
+export function getPrivateMessageNotifications() {
+    return request({ url: '/interact/message/notifications', method: 'get' })
+}

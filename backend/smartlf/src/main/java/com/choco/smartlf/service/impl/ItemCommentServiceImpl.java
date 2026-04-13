@@ -18,6 +18,7 @@ import com.choco.smartlf.mapper.ItemCommentMapper;
 import com.choco.smartlf.service.ItemInfoService;
 import com.choco.smartlf.service.UserService;
 import com.choco.smartlf.utils.UserContext;
+import com.choco.smartlf.websocket.ChatWebSocketServer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -70,6 +71,14 @@ public class ItemCommentServiceImpl extends ServiceImpl<ItemCommentMapper, ItemC
         iteminfo.setLatestReplyTime(now);
         itemInfoService.updateById(iteminfo);
         log.info("更新帖子{}的顶贴时间成功！", iteminfo.getId());
+
+        // 找出这个帖子的发布者ID
+        Long itemOwnerId = itemInfoService.getById(dto.getItemId()).getUserId();
+
+        // 如果留言的不是帖子主人自己，就通过 WebSocket 实时推送系统通知红点！
+        if (!itemOwnerId.equals(UserContext.getUserId())) {
+            ChatWebSocketServer.pushNotice(itemOwnerId);
+        }
     }
 
     @Override
