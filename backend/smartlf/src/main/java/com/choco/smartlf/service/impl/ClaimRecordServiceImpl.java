@@ -25,6 +25,7 @@ import com.choco.smartlf.service.ItemSecureService;
 import com.choco.smartlf.service.UserService;
 import com.choco.smartlf.utils.Constant;
 import com.choco.smartlf.utils.UserContext;
+import com.choco.smartlf.utils.WsNoticeConstant;
 import com.choco.smartlf.websocket.ChatWebSocketServer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -115,9 +116,10 @@ public class ClaimRecordServiceImpl extends ServiceImpl<ClaimRecordMapper, Claim
         this.save(record);
         log.info("用户 {} 提交认领申请成功，申请单ID：{}", currentUserId, record.getId());
 
-        // 6. 神级闭环：通知发帖人“有人来认领了”
+        // 6. 通知发帖人“有人来认领了”
         // 这里的 item.getUserId() 就是发帖人的 ID
-        ChatWebSocketServer.pushClaimNotice(iteminfo.getUserId());
+        ChatWebSocketServer.pushSystemNotice(iteminfo.getUserId(),
+                String.format(WsNoticeConstant.NEW_CLAIM_APPLY, iteminfo.getPublicDesc()));
     }
 
     @Override
@@ -160,8 +162,7 @@ public class ClaimRecordServiceImpl extends ServiceImpl<ClaimRecordMapper, Claim
         this.updateById(record);
 
         // 6. 实时通知发布者（即帖主）
-        // 告诉帖主：那个物品 ID 为 record.getItemId() 的申请单已经更新了
-        com.choco.smartlf.websocket.ChatWebSocketServer.pushClaimNotice(record.getPublisherId());
+        ChatWebSocketServer.pushSystemNotice(iteminfo.getUserId(), String.format(WsNoticeConstant.NEW_CLAIM_APPLY, iteminfo.getPublicDesc()));
     }
 
     @Override
@@ -191,6 +192,10 @@ public class ClaimRecordServiceImpl extends ServiceImpl<ClaimRecordMapper, Claim
         // 5. 获取前端传来的目标动作（1:同意, 2:拒绝, 3:要求补充）
         Integer targetStatus = dto.getStatus();
 
+        //获取帖子的标题
+        String title = itemInfoService.getById(record.getItemId()).getPublicDesc();
+        //处理的状态码
+        Integer status;
         // ================= 核心状态机流转 =================
 
         // 分支 A：同意申请
@@ -220,13 +225,18 @@ public class ClaimRecordServiceImpl extends ServiceImpl<ClaimRecordMapper, Claim
                 for (ClaimRecord otherClaim : claimRecords) {
                     // 把每个都置为拒绝
                     otherClaim.setStatus(ClaimStatusEnum.REJECTED.getCode());
-                    // 通知被拒绝的人
-                    ChatWebSocketServer.pushClaimNotice(otherClaim.getApplicantId());
                 }
                 // 批量更新落选者
                 this.updateBatchById(claimRecords);
+                //再循环一次，通知每个落选者
+                for (ClaimRecord otherClaim : claimRecords) {
+                    // 通知被拒绝的人
+                    ChatWebSocketServer.pushSystemNotice(otherClaim.getApplicantId(),
+                            String.format(WsNoticeConstant.CLAIM_STATUS_CHANGED,title,ClaimStatusEnum.REJECTED.getDesc()));
+                }
             }
-            record.setStatus(ClaimStatusEnum.APPROVED.getCode());
+            status=ClaimStatusEnum.APPROVED.getCode();
+            record.setStatus(status);
         }
 
         // 分支 B：要求补充证据
@@ -235,14 +245,16 @@ public class ClaimRecordServiceImpl extends ServiceImpl<ClaimRecordMapper, Claim
             if (dto.getSupplementQuestion() == null || dto.getSupplementQuestion().trim().isEmpty()) {
                 throw new BusinessException("要求补充证据时，必须填写追问问题");
             }
-            record.setStatus(ClaimStatusEnum.REQUIRE_SUPPLEMENT.getCode());
+            status=ClaimStatusEnum.REQUIRE_SUPPLEMENT.getCode();
+            record.setStatus(status);
            //每个申请的核验问题可以是不一样的，且后台没记录，纯发帖人自己审核
             record.setSupplementQuestion(dto.getSupplementQuestion());
         }
 
         // 分支 C：残忍拒绝 (状态变更为 2，不需要额外特殊处理，直接 update)
         else if (ClaimAuditActionEnum.REJECT.getCode().equals(targetStatus)){
-            record.setStatus(ClaimStatusEnum.REJECTED.getCode());
+            status=ClaimStatusEnum.REJECTED.getCode();
+            record.setStatus(status);
         }else {
             throw new BusinessException("无效的操作动作");
         }
@@ -252,8 +264,9 @@ public class ClaimRecordServiceImpl extends ServiceImpl<ClaimRecordMapper, Claim
         // 6. 落库保存更改
         this.updateById(record);
 
-        // 7. 神级闭环：通知申请人（您的申请有结果啦！）
-        ChatWebSocketServer.pushClaimNotice(record.getApplicantId());
+        // 7. 通知申请人
+        ChatWebSocketServer.pushSystemNotice(record.getApplicantId(),
+                String.format(WsNoticeConstant.CLAIM_STATUS_CHANGED,title,ClaimStatusEnum.getDescByCode(status)));
     }
 
     @Override

@@ -22,7 +22,7 @@ public enum ClaimStatusEnum {
     }
 
     /**
-     * 根据 code 获取描述（可用于简单的转换）
+     * 根据 code 获取描述
      */
     public static String getDescByCode(Integer code) {
         for (ClaimStatusEnum status : values()) {

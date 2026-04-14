@@ -8,6 +8,7 @@ import com.choco.smartlf.enums.WebSocketMsgTypeEnum;
 import com.choco.smartlf.service.PrivateMessageService;
 import com.choco.smartlf.service.impl.TokenAuthService;
 import com.choco.smartlf.utils.Constant;
+import com.choco.smartlf.utils.WsNoticeConstant;
 import io.jsonwebtoken.Claims;
 import jakarta.websocket.*;
 import jakarta.websocket.server.PathParam;
@@ -24,6 +25,10 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ChatWebSocketServer {
 
     private static final ConcurrentHashMap<Long, Session> ONLINE_USERS = new ConcurrentHashMap<>();
+    /**
+     * 'A的id,B的id'
+     * 表示A正在查看与B的会话
+     */
     private static final ConcurrentHashMap<Long, Long> ACTIVE_WINDOWS = new ConcurrentHashMap<>();
 
     private static TokenAuthService tokenAuthService;
@@ -84,16 +89,28 @@ public class ChatWebSocketServer {
                 }
 
                 Long receiverFocusId = ACTIVE_WINDOWS.get(messageDTO.getReceiverId());
+                /**
+                 * 对方正在聊天
+                 */
+                boolean isReceiverChatting= receiverFocusId != null;
+                /**
+                 * 对方正在查看跟我的聊天窗口
+                 */
                 boolean isReceiverFocusingMe = (receiverFocusId != null && receiverFocusId.equals(this.currentUserId));
 
-                PrivateMessage savedMessage = privateMessageService.sendMessage(messageDTO, this.currentUserId, isReceiverFocusingMe);
+                //将我发的消息先存入库
+                //如果对方没focus我，默认未读。若对方focus我，我发给对方消息都设为已读
+                //对方没在聊天，全局通知一下
+                PrivateMessage savedMessage = privateMessageService.sendMessage(messageDTO, this.currentUserId, isReceiverFocusingMe,isReceiverChatting);
 
+                //对方在线，传输给对方
                 if (isOnline(messageDTO.getReceiverId())) {
                     // 🌟 核心修改：包装成带 type 的标准协议发送给前端
                     JSONObject pushData = new JSONObject();
                     pushData.set(Constant.MSG_TYPE_KEY, WebSocketMsgTypeEnum.CHAT);
                     pushData.set(Constant.MSG_DATA_KEY, savedMessage);
                     pushMessage(messageDTO.getReceiverId(), pushData);
+
                 }
             }
         } catch (Exception e) {
@@ -115,8 +132,14 @@ public class ChatWebSocketServer {
         log.error("【全局 WebSocket】发生错误", error);
     }
 
+    /**
+     * 推送聊天消息
+     * @param targetUserId 目标用户 ID
+     * @param messageObj 带 type 的标准协议的消息对象
+     */
     private static void pushMessage(Long targetUserId, Object messageObj) {
         Session session = ONLINE_USERS.get(targetUserId);
+        //对方在线
         if (session != null && session.isOpen()) {
             try {
                 session.getAsyncRemote().sendText(JSONUtil.toJsonStr(messageObj));
@@ -124,19 +147,38 @@ public class ChatWebSocketServer {
         }
     }
 
-    // 🌟 新增：供 ItemCommentServiceImpl 调用的公共通知方法
-    public static void pushNotice(Long targetUserId) {
+//    /**
+//     * 发留言之后小窗通知帖主
+//     * @param targetUserId 目标用户 ID
+//     */
+//    public static void pushNotice(Long targetUserId) {
+//        //帖主在线，发通知给他
+//        if (isOnline(targetUserId)) {
+//            JSONObject pushData = new JSONObject();
+//            pushData.set(Constant.MSG_TYPE_KEY, WebSocketMsgTypeEnum.NOTICE);
+//            pushMessage(targetUserId, pushData);
+//        }
+//    }
+
+//    /**
+//     * 认领申请通知
+//     * @param targetUserId 帖主 ID
+//     */
+//    public static void pushClaimNotice(Long targetUserId) {
+//        if (isOnline(targetUserId)) {
+//            JSONObject pushData = new JSONObject();
+//            pushData.set(Constant.MSG_TYPE_KEY, WebSocketMsgTypeEnum.NOTICE); // 🌟 专门用于认领申请状态变更的通知
+//            pushMessage(targetUserId, pushData);
+//        }
+//    }
+    /**
+     * 系统通知，传入要通知的人和内容
+     */
+    public static void pushSystemNotice(Long targetUserId, String content) {
         if (isOnline(targetUserId)) {
             JSONObject pushData = new JSONObject();
             pushData.set(Constant.MSG_TYPE_KEY, WebSocketMsgTypeEnum.NOTICE);
-            pushMessage(targetUserId, pushData);
-        }
-    }
-
-    public static void pushClaimNotice(Long targetUserId) {
-        if (isOnline(targetUserId)) {
-            JSONObject pushData = new JSONObject();
-            pushData.set(Constant.MSG_TYPE_KEY, WebSocketMsgTypeEnum.CLAIM); // 🌟 专门用于认领申请状态变更的通知
+            pushData.set(Constant.MSG_DATA_KEY, content);
             pushMessage(targetUserId, pushData);
         }
     }

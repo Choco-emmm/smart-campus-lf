@@ -1,6 +1,9 @@
 spring:
   application:
     name: smartlf
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss  # 全局统一的时间格式
+    time-zone: GMT+8                  # 强制指定中国时区（极其重要，防止差 8 小时）
   ai:
     ollama:
       base-url: http://localhost:11434

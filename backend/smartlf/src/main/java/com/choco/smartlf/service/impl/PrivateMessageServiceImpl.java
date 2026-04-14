@@ -15,6 +15,8 @@ import com.choco.smartlf.mapper.PrivateMessageMapper;
 import com.choco.smartlf.service.PrivateMessageService;
 import com.choco.smartlf.service.UserService;
 import com.choco.smartlf.utils.UserContext;
+import com.choco.smartlf.utils.WsNoticeConstant;
+import com.choco.smartlf.websocket.ChatWebSocketServer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -36,13 +38,14 @@ public class PrivateMessageServiceImpl extends ServiceImpl<PrivateMessageMapper,
     private final UserService userService;
     // 🌟 HTTP 接口调用的方法
     @Override
-    public PrivateMessage sendMessage(MessageSendDTO dto, Long senderId, boolean isReceiverOnline) {
+    public PrivateMessage sendMessage(MessageSendDTO dto, Long senderId, boolean isReceiverOnline,boolean isReceiverChatting) {
         if (senderId == null) {
             throw new RuntimeException("发送人ID不能为空");
         }
 
-        UserInfoVO userInfo = userService.getUserInfo(dto.getReceiverId());
-        if(userInfo == null){
+        UserInfoVO receiverInfo = userService.getUserInfo(dto.getReceiverId());
+
+        if(receiverInfo == null){
             throw new RuntimeException("接收人不存在");
         }
 
@@ -57,8 +60,15 @@ public class PrivateMessageServiceImpl extends ServiceImpl<PrivateMessageMapper,
             privateMessage.setIsRead(ReadStatusEnum.UNREAD.getCode());
         }
 
+        UserInfoVO senderInfo = userService.getUserInfo(senderId);
+
         save(privateMessage);
         log.info("发送私信成功，落库状态(1已读/0未读): {}", privateMessage.getIsRead());
+
+        if(!isReceiverChatting){
+            //对方不在看聊天窗口就发个通知给他
+            ChatWebSocketServer.pushSystemNotice(dto.getReceiverId(),String.format(WsNoticeConstant.NEW_PRIVATE_MESSAGE,senderInfo.getNickname()));
+        }
 
         return privateMessage;
     }

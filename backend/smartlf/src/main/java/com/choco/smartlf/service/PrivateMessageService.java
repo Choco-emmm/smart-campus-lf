@@ -13,7 +13,7 @@ import java.util.List;
  */
 public interface PrivateMessageService extends IService<PrivateMessage> {
 
-    PrivateMessage sendMessage(MessageSendDTO dto, Long senderId, boolean isReceiverOnline);
+    PrivateMessage sendMessage(MessageSendDTO dto, Long senderId, boolean isReceiverOnline,boolean isReceiverChatting);
 
     List<PrivateMessage> getChatHistory(Long targetUserId);
 
