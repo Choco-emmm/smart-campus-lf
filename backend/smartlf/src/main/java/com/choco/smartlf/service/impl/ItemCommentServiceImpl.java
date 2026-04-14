@@ -13,11 +13,13 @@ import com.choco.smartlf.entity.vo.ItemCommentNotificationVO;
 import com.choco.smartlf.entity.vo.ItemCommentVO;
 import com.choco.smartlf.entity.vo.ItemDetailVO;
 import com.choco.smartlf.enums.ReadStatusEnum;
+import com.choco.smartlf.enums.WebSocketMsgTypeEnum;
 import com.choco.smartlf.service.ItemCommentService;
 import com.choco.smartlf.mapper.ItemCommentMapper;
 import com.choco.smartlf.service.ItemInfoService;
 import com.choco.smartlf.service.UserService;
 import com.choco.smartlf.utils.UserContext;
+import com.choco.smartlf.utils.WsNoticeConstant;
 import com.choco.smartlf.websocket.ChatWebSocketServer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -72,12 +74,16 @@ public class ItemCommentServiceImpl extends ServiceImpl<ItemCommentMapper, ItemC
         itemInfoService.updateById(iteminfo);
         log.info("更新帖子{}的顶贴时间成功！", iteminfo.getId());
 
-        // 找出这个帖子的发布者ID
-        Long itemOwnerId = itemInfoService.getById(dto.getItemId()).getUserId();
+        // 找出这个帖子
+        ItemInfo itemInfo = itemInfoService.getById(dto.getItemId());
+        //找出发帖人id和帖子名字
+        Long itemOwnerId = itemInfo.getUserId();
+        String itemTitle = iteminfo.getPublicDesc();
+
 
         // 如果留言的不是帖子主人自己，就通过 WebSocket 实时推送系统通知红点！
         if (!itemOwnerId.equals(UserContext.getUserId())) {
-            ChatWebSocketServer.pushNotice(itemOwnerId);
+            ChatWebSocketServer.pushSystemNotice(itemOwnerId,String.format( WsNoticeConstant.NEW_COMMENT, itemTitle));
         }
     }
 

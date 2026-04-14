@@ -27,6 +27,8 @@ public class ItemInfo {
     private String location;
     @Schema(description="帖子标题/公开简述(如：在二饭捡到一把黑色雨伞)")
     private String publicDesc;
+    @Schema(description="ai生成的分类")
+    private String aiCategory;
     @Schema(description="0:寻找中，1:锁定中，2:已结案,3:违规下架", implementation = com.choco.smartlf.enums.ItemStatusEnum.class)
     private Integer status;
     @Schema(description="是否置顶（0:否，1:是）", implementation = com.choco.smartlf.enums.TopEnum.class)

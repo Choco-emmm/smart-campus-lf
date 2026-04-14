@@ -26,7 +26,7 @@ public class Constant {
      * 邮箱正则：允许字母、数字、点、下划线、百分号、加号、减号
      */
     public static final String EMAIL_REGEX = "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$";
-
+    public static final String IMAGE_PATH_PREFIX_REGEX ="^/?images/" ;
     /**
      * Redis中存储token的key
      */
@@ -55,6 +55,7 @@ public class Constant {
 
     public static final String TOKEN_BANNED_VALUE = "banned";
     public static final Long TOP_END_TIME_HOURS = 24L;
+
 
     /**
      * websocket键
