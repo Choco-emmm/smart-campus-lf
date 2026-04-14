@@ -20,7 +20,7 @@
             <h1 class="post-title">{{ detail.publicDesc }}</h1>
             
             <div v-if="detail.hasSecureCheck" class="secure-badge">
-              <el-icon><Key /></el-icon> 楼主已开启隐私核验 / 专属认领流程
+              <el-icon><Key /></el-icon> 楼主已开启专属认领核验流程
             </div>
 
             <div class="post-meta">
@@ -134,12 +134,8 @@
             </div>
 
             <div v-else class="normal-actions">
-              <el-button v-if="detail.hasSecureCheck && !detail.contactInfo" type="success" class="full-btn" @click="verifyDialogVisible = true">
-                 <el-icon><Stamp /></el-icon> 申请认领
-              </el-button>
-              
-              <el-button v-if="detail.hasSecureCheck && detail.contactInfo" type="success" plain class="full-btn" @click="showContactInfo">
-                 <el-icon><Unlock /></el-icon> 已解锁联系方式
+              <el-button v-if="detail.hasSecureCheck" type="success" class="full-btn" @click="verifyDialogVisible = true">
+                 <el-icon><Stamp /></el-icon> 提交认领申请
               </el-button>
 
               <el-button type="primary" class="full-btn" @click="handleContact">私聊联系</el-button>
@@ -165,14 +161,14 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="verifyDialogVisible" title="申请认领" width="400px" destroy-on-close>
+    <el-dialog v-model="verifyDialogVisible" title="提交认领申请" width="400px" destroy-on-close>
       <div style="margin-bottom: 15px; font-weight: bold; color: #1d2129;">
-        核验问题：{{ detail.verifyQuestion || '失主未设置问题，请输入暗号' }}
+        核验问题：{{ detail.verifyQuestion || '失主未设置问题，请输入暗号或补充描述' }}
       </div>
-      <el-input v-model="verifyAnswer" placeholder="请输入你的答案" clearable @keyup.enter="handleVerifySubmit" />
+      <el-input v-model="verifyAnswer" placeholder="请输入你的答案 / 物品细节特征" clearable @keyup.enter="handleVerifySubmit" />
       <template #footer>
         <el-button @click="verifyDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleVerifySubmit" :loading="verifying">提交答案</el-button>
+        <el-button type="primary" @click="handleVerifySubmit" :loading="verifying">提交申请</el-button>
       </template>
     </el-dialog>
   </div>
@@ -183,8 +179,8 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { PriceTag, Location, Warning, Top, Remove, MagicStick, Lock, Unlock, Loading, Clock, Stamp, Key } from '@element-plus/icons-vue' 
-import { getItemDetail, deleteItem, reportItem, updateItemStatus, applyItemTop, verifyItemSecure } from '@/api/item'
-import { getCommentList, addComment } from '@/api/interact'
+import { getItemDetail, deleteItem, reportItem, updateItemStatus, applyItemTop } from '@/api/item'
+import { getCommentList, addComment, submitClaim } from '@/api/interact' // 修改为调用 submitClaim
 import { getUserInfo } from '@/api/user'
 import { banItem, toggleTopByAdmin, getItemDetailByAdmin } from '@/api/admin'
 import { marked } from 'marked'
@@ -260,28 +256,17 @@ const handleStatusChange = async (val) => {
   ElMessage.success('状态已更新')
 }
 
+// ======== 核心改动：提交认领申请 ========
 const handleVerifySubmit = async () => {
   if (!verifyAnswer.value.trim()) return ElMessage.warning('请输入答案')
   verifying.value = true
   try {
-    const res = await verifyItemSecure(detail.value.id, verifyAnswer.value.trim())
-    detail.value.contactInfo = res.data 
+    await submitClaim({ itemId: detail.value.id, answer: verifyAnswer.value.trim() })
     verifyDialogVisible.value = false
-    
-    ElMessageBox.alert(`核验成功！<br/><br/>对方留下的私密联系方式为：<br/><b style="font-size:18px;color:#1e80ff;">${res.data}</b>`, '认领成功', {
-      dangerouslyUseHTMLString: true,
-      type: 'success'
-    })
+    ElMessage.success('认领申请已成功提交，请前往【消息中心】留意帖主审核进度！')
   } finally {
     verifying.value = false
   }
-}
-
-const showContactInfo = () => {
-  ElMessageBox.alert(`对方留下的私密联系方式为：<br/><b style="font-size:18px;color:#1e80ff;">${detail.value.contactInfo}</b>`, '已解锁的联系方式', {
-    dangerouslyUseHTMLString: true,
-    type: 'success'
-  })
 }
 
 const handleAdminBan = () => {
@@ -335,80 +320,22 @@ onMounted(() => fetchData())
 .detail-layout { display: flex; gap: 20px; max-width: 1200px; margin: 0 auto; padding: 20px; align-items: flex-start; }
 .main-content { flex: 1; min-width: 0; }
 .side-bar { width: 300px; position: sticky; top: 20px; }
-
-.owner-actions, .admin-actions, .normal-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 12px; 
-}
+.owner-actions, .admin-actions, .normal-actions { display: flex; flex-direction: column; gap: 12px; }
 .full-btn { width: 100%; margin: 0 !important; }
-
 .post-title { font-size: 26px; margin: 15px 0 5px 0; color: #1d2129; }
-
-.secure-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background-color: #fdf6ec;
-  color: #e6a23c;
-  padding: 4px 10px;
-  border-radius: 4px;
-  font-size: 13px;
-  font-weight: bold;
-  margin-bottom: 12px;
-}
-
+.secure-badge { display: inline-flex; align-items: center; gap: 6px; background-color: #fdf6ec; color: #e6a23c; padding: 4px 10px; border-radius: 4px; font-size: 13px; font-weight: bold; margin-bottom: 12px; }
 .info-bar { display: flex; flex-wrap: wrap; gap: 24px; padding: 16px; background: #f7f8fa; border-radius: 8px; }
 .info-item { display: flex; align-items: center; gap: 4px; color: #4e5969; font-size: 15px; }
 .desc-content { font-size: 16px; line-height: 1.8; color: #4e5969; margin: 20px 0; white-space: pre-wrap; }
-
-.ai-desc-container {
-  margin: 20px 0;
-  padding: 16px 20px;
-  background: linear-gradient(to right, #f4f8ff, #f9fbff);
-  border-left: 4px solid #1e80ff;
-  border-radius: 6px;
-}
-.ai-desc-title {
-  font-weight: bold;
-  color: #1e80ff;
-  margin-bottom: 12px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 15px;
-}
-.generating-text {
-  color: #909399;
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 0;
-}
-
-.admin-secure-container {
-  margin: 20px 0;
-  padding: 16px 20px;
-  background: #fff4f4;
-  border: 1px solid #fbc4c4;
-  border-radius: 6px;
-}
-.secure-title {
-  font-weight: bold;
-  color: #f56c6c;
-  margin-bottom: 15px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 16px;
-}
-
+.ai-desc-container { margin: 20px 0; padding: 16px 20px; background: linear-gradient(to right, #f4f8ff, #f9fbff); border-left: 4px solid #1e80ff; border-radius: 6px; }
+.ai-desc-title { font-weight: bold; color: #1e80ff; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; font-size: 15px; }
+.generating-text { color: #909399; font-size: 14px; display: flex; align-items: center; gap: 6px; padding: 10px 0; }
+.admin-secure-container { margin: 20px 0; padding: 16px 20px; background: #fff4f4; border: 1px solid #fbc4c4; border-radius: 6px; }
+.secure-title { font-weight: bold; color: #f56c6c; margin-bottom: 15px; display: flex; align-items: center; gap: 6px; font-size: 16px; }
 .markdown-body :deep(p) { line-height: 1.6; color: #4e5969; margin-bottom: 8px; font-size: 15px; }
 .markdown-body :deep(ul), .markdown-body :deep(ol) { padding-left: 20px; margin-bottom: 10px; color: #4e5969; line-height: 1.6;}
 .markdown-body :deep(li) { margin-bottom: 4px; }
 .markdown-body :deep(strong) { color: #1d2129; font-weight: 600; }
-
 .pointer { cursor: pointer; transition: opacity 0.2s; }
 .pointer:hover { opacity: 0.8; }
 .ml-10 { margin-left: 10px; }

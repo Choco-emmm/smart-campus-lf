@@ -75,14 +75,17 @@ public class ChatWebSocketServer {
                 Long targetId = json.getLong("targetId");
                 if (targetId == null) {
                     ACTIVE_WINDOWS.remove(this.currentUserId);
+                    log.info("【全局 WebSocket】用户 {} 取消查看任何人", this.currentUserId);
                 } else {
                     ACTIVE_WINDOWS.put(this.currentUserId, targetId);
+                    log.info("【全局 WebSocket】用户 {} 查看了用户 {}", this.currentUserId, targetId);
                 }
                 return;
             }
 
             // 2. 聊天消息
             if (WebSocketMsgTypeEnum.CHAT.getType().equals(type)) {
+                log.info("【全局 WebSocket】用户 {} 发送消息", this.currentUserId);
                 MessageSendDTO messageDTO = JSONUtil.toBean(json, MessageSendDTO.class);
                 if (messageDTO.getContent() == null || messageDTO.getContent().trim().isEmpty()) {
                     return;
@@ -107,7 +110,7 @@ public class ChatWebSocketServer {
                 if (isOnline(messageDTO.getReceiverId())) {
                     // 🌟 核心修改：包装成带 type 的标准协议发送给前端
                     JSONObject pushData = new JSONObject();
-                    pushData.set(Constant.MSG_TYPE_KEY, WebSocketMsgTypeEnum.CHAT);
+                    pushData.set(Constant.MSG_TYPE_KEY, WebSocketMsgTypeEnum.CHAT.getType());
                     pushData.set(Constant.MSG_DATA_KEY, savedMessage);
                     pushMessage(messageDTO.getReceiverId(), pushData);
 
@@ -177,8 +180,8 @@ public class ChatWebSocketServer {
     public static void pushSystemNotice(Long targetUserId, String content) {
         if (isOnline(targetUserId)) {
             JSONObject pushData = new JSONObject();
-            pushData.set(Constant.MSG_TYPE_KEY, WebSocketMsgTypeEnum.NOTICE);
-            pushData.set(Constant.MSG_DATA_KEY, content);
+            pushData.set(Constant.MSG_TYPE_KEY, WebSocketMsgTypeEnum.NOTICE.getType());
+            pushData.set(Constant.MSG_CONTENT_KEY, content);
             pushMessage(targetUserId, pushData);
         }
     }

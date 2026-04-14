@@ -355,7 +355,7 @@ public class ClaimRecordServiceImpl extends ServiceImpl<ClaimRecordMapper, Claim
             }
 
 
-            // ② 查出该帖子的私密表信息（包含联系方式和自定义问题）
+            // ② 查出该帖子的私密表信息（包含联系方式和自定义问题），并选择性填充到vo
             ItemSecure secure = itemSecureService.getOne(
                     new LambdaQueryWrapper<ItemSecure>()
                             .eq(ItemSecure::getItemId, record.getItemId())

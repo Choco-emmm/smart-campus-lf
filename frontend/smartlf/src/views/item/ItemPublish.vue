@@ -83,7 +83,8 @@ import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Plus } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import { publishItem, uploadImage, generateAiDesc } from '@/api/item'
+// 🌟 1. 移除了旧的 generateAiDesc 接口引入
+import { publishItem, uploadImage } from '@/api/item'
 
 const router = useRouter()
 const submitting = ref(false)
@@ -156,10 +157,8 @@ const onSubmit = async () => {
   try {
     const res = await publishItem(form)
     if (res.code === 1 || res.code === 200) {
-      const itemId = res.data
-      generateAiDesc(itemId).catch(e => console.error('AI润色触发失败', e))
-      
-      ElMessage.success('发布成功！AI 正在为您生成智能描述...')
+      // 🌟 2. 移除了前端调用 AI 的逻辑，完全交给后端幕后处理
+      ElMessage.success('发布成功！AI 正在后台为您智能提取图片特征，稍后将通过系统通知您。')
       router.push('/')
     }
   } finally {

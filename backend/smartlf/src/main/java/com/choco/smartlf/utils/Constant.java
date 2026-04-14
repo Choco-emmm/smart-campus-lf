@@ -81,4 +81,5 @@ public class Constant {
      * 验证码已过期
      */
     public static final String CAPTCHA_EXPIRED = "已过期失效";
+    public static final String MSG_CONTENT_KEY = "content";
 }

@@ -12,7 +12,7 @@
             <el-menu-item index="/">广场</el-menu-item>
             
             <el-menu-item index="/message">
-              <el-badge :value="totalUnread" :hidden="totalUnread === 0" class="nav-badge">
+              <el-badge is-dot :hidden="!hasAnyUnread" class="nav-badge">
                 <span>消息中心</span>
               </el-badge>
             </el-menu-item>
@@ -59,7 +59,8 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { getUserInfo } from '@/api/user'
-import { getCommentNotifications, getPrivateMessageNotifications } from '@/api/interact'
+// 🌟 确保这里只有一行关于 interact 的 import，包含所有需要的接口
+import { getCommentNotifications, getPrivateMessageNotifications, getMyReceivedClaims, getMySentClaims } from '@/api/interact'
 import { ElMessageBox, ElNotification } from 'element-plus'
 import { User, SwitchButton } from '@element-plus/icons-vue'
 
@@ -67,13 +68,12 @@ const router = useRouter()
 const route = useRoute()
 
 const userInfo = ref({ id: null, nickname: '', avatarUrl: '', role: 0 })
-
-// 分开存储两类未读数，方便管理
 const msgUnreadCount = ref(0)
 const noticeUnreadCount = ref(0)
-const totalUnread = computed(() => msgUnreadCount.value + noticeUnreadCount.value)
+const hasUnprocessedClaim = ref(false)
 
-// 全局暴露给 MessageCenter.vue 用的，判断当前视野在看谁
+const hasAnyUnread = computed(() => msgUnreadCount.value > 0 || noticeUnreadCount.value > 0 || hasUnprocessedClaim.value)
+
 window.activeChatId = null 
 
 const getImageUrl = (url) => {
@@ -88,59 +88,70 @@ const fetchUserInfo = async () => {
   } catch (error) {}
 }
 
-// 页面刚刷新时，作为兜底去后端拉取一次准确的总数
 const fetchInitialUnread = async () => {
   const token = localStorage.getItem('token')
   if (!token) return
   try {
-    const [msgRes, noticeRes] = await Promise.all([
+    const [msgRes, noticeRes, claimReceivedRes, claimSentRes] = await Promise.all([
       getPrivateMessageNotifications(),
-      getCommentNotifications()
+      getCommentNotifications(),
+      getMyReceivedClaims(),
+      getMySentClaims() 
     ])
     msgUnreadCount.value = msgRes.data || 0
     const noticeList = noticeRes.data || []
     noticeUnreadCount.value = noticeList.reduce((sum, item) => sum + item.unreadCount, 0)
-  } catch (error) {}
+    
+    const receivedClaims = claimReceivedRes.data || []
+    const sentClaims = claimSentRes.data || []
+
+    // 帖主视角需要处理 0 和 4，申请人视角需要处理 3
+    hasUnprocessedClaim.value = 
+      receivedClaims.some(c => c.status === 0 || c.status === 4) || 
+      sentClaims.some(c => c.status === 3)
+
+  } catch (error) {
+    console.error("获取未读数据失败:", error)
+  }
 }
 
-// 🌟 核心：全局 WebSocket 初始化
 const initGlobalWebSocket = () => {
   const token = localStorage.getItem('token')
   if (!token) return
 
   const ws = new WebSocket(`ws://localhost:8080/ws/chat/${token}`)
-  
-  // 挂载到 window，让整个系统都能随时用它发消息
   window.globalWs = ws 
 
   ws.onopen = () => {
-    console.log('🌍 全局 WebSocket 连接成功')
     window.dispatchEvent(new Event('ws-opened'))
   }
-
+  
   ws.onmessage = (event) => {
     const res = JSON.parse(event.data)
+    const msgType = res.type || res.msgType
     
-    if (res.type === 'chat') {
-      const msgData = res.data
-      
-      // 如果当前没有盯着这个发件人看，才增加红点
+    if (msgType === 'chat') {
+      const msgData = res.data || res
       if (window.activeChatId !== msgData.senderId) {
         msgUnreadCount.value++
       }
-
-      // 广播给消息中心页面去渲染聊天气泡或更新列表
       window.dispatchEvent(new CustomEvent('ws-chat-message', { detail: msgData }))
       
-    } else if (res.type === 'notice') {
-      // 收到留言通知
-      noticeUnreadCount.value++
-      ElNotification({ title: '新提醒', message: '您的帖子有新的留言啦！', type: 'success', position: 'bottom-right' })
-      // 广播给消息中心刷新通知列表
+    } else if (msgType === 'notice') {
+      fetchInitialUnread()
+      
+      const noticeContent = res.content || res.data || '您有一条新的提醒！'
+      ElNotification({ 
+        title: '系统通知', 
+        message: noticeContent,
+        type: 'success', 
+        position: 'bottom-right',
+        duration: 5000 
+      })
       window.dispatchEvent(new Event('ws-notice-message'))
     }
   }
-
+  
   ws.onclose = () => {
     window.globalWs = null
   }
@@ -157,39 +168,26 @@ const handleLogout = () => {
 onMounted(() => {
   fetchUserInfo()
   fetchInitialUnread()
-  initGlobalWebSocket()
-  
-  // 监听子页面手动消除私信红点的事件
   window.addEventListener('clear-chat-unread', (e) => { 
     msgUnreadCount.value = Math.max(0, msgUnreadCount.value - e.detail) 
   })
-
-  // 🌟🌟🌟 新增：把监听“留言已读”的耳朵加回来！
-  // 当听到 refresh-unread 时，重新向后端发起一次核对请求 (兜底机制)
   window.addEventListener('refresh-unread', fetchInitialUnread)
 })
 
 onUnmounted(() => {
-  window.removeEventListener('clear-chat-unread', handleIncomingChat) // 注：你原代码这里绑定的变量名有点小笔误，不过不影响大局
-  
-  // 🌟🌟🌟 新增：离开页面时销毁监听器，防止内存泄漏
   window.removeEventListener('refresh-unread', fetchInitialUnread)
-  
-  if (window.globalWs) {
-    window.globalWs.close()
-  }
+  if (window.globalWs) window.globalWs.close()
 })
 </script>
 
 <style scoped>
-/* 保持你的原样即可 */
 .nav-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #dcdfe6; background: #fff; padding: 0 40px; height: 60px; }
 .header-left { display: flex; align-items: center; gap: 12px; cursor: pointer; }
 .logo { width: 32px; height: 32px; }
 .title { font-size: 18px; font-weight: bold; color: #409eff; }
 .header-right { display: flex; align-items: center; }
 :deep(.el-menu--horizontal) { border-bottom: none !important; }
-.nav-badge :deep(.el-badge__content) { top: 15px; right: 0px; }
+.nav-badge :deep(.el-badge__content) { top: 20px; right: 5px; }
 .user-profile { margin-left: 20px; display: flex; align-items: center; }
 .user-dropdown-link { display: flex; align-items: center; gap: 10px; cursor: pointer; outline: none; padding: 5px 8px; border-radius: 4px; transition: background 0.3s; }
 .user-dropdown-link:hover { background: #f5f7fa; }
