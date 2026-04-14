@@ -20,10 +20,8 @@ import com.choco.smartlf.enums.*;
 import com.choco.smartlf.exception.BusinessException;
 import com.choco.smartlf.mapper.ItemInfoMapper;
 import com.choco.smartlf.service.*;
-import com.choco.smartlf.utils.AIConstant;
-import com.choco.smartlf.utils.Constant;
-import com.choco.smartlf.utils.ImageNameUtil;
-import com.choco.smartlf.utils.UserContext;
+import com.choco.smartlf.utils.*;
+import com.choco.smartlf.websocket.ChatWebSocketServer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
@@ -44,6 +42,8 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.File;
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -123,7 +123,7 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
         // 只要用户传了图片，或者写了初步的 publicDesc，我们都可以让 AI 去识别补全
         if (CollUtil.isNotEmpty(dto.getImagesUrlList())
                 ||StrUtil.isNotBlank(dto.getPublicDesc())) {
-            generateMultimodalInfoAsync(itemId, dto.getImagesUrlList(), dto.getPublicDesc());
+            generateMultimodalInfoAsync(itemInfo, dto.getImagesUrlList(), dto.getPublicDesc(), UserContext.getUserId());
         }
         return itemId;
     }
@@ -235,8 +235,10 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
             // 使用 saveOrUpdate：如果以前没开启就插入，开启了就更新
             itemSecureService.saveOrUpdate(itemSecure);
         }
+        //查询新的info信息
+        ItemInfo newItemInfo = this.getById(itemId);
         //调用ai润色+生成分类
-        generateMultimodalInfoAsync(dto.getId(), dto.getImagesUrlList(), dto.getPublicDesc());
+        generateMultimodalInfoAsync(newItemInfo, dto.getImagesUrlList(), dto.getPublicDesc(), currentUserId);
 
         log.info("物品信息更新成功，物品ID: {}, 操作人ID: {}", itemId, currentUserId);
     }
@@ -521,60 +523,71 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
     }
 
     /**
-     * 核心：异步多模态视觉识别（多图 + 文本融合）
-     * @param itemId 帖子 ID
-     * @param imageUrls 前端传来的图片 URL 数组 (例如：["/images/items/1.jpg", "/images/items/2.jpg"])
-     * @param userDesc 用户填写的初步描述
+     * 核心：异步多模态视觉识别（多图 + 全文本融合）
+     * @param itemInfo 刚刚落库完毕的完整物品信息对象
+     * @param imageUrls 前端传来的图片 URL 数组
+     * @param userDesc 用户填写的初步描述 (PublicDesc)
+     * @param userId 触发该操作的用户ID (用于WebSocket回调通知)
      */
-    public void generateMultimodalInfoAsync(Long itemId, List<String> imageUrls, String userDesc) {
-        log.info("【主线程】触发多模态融合识别任务，物品ID: {}", itemId);
+    public void generateMultimodalInfoAsync(ItemInfo itemInfo, List<String> imageUrls, String userDesc, Long userId) {
+        Long itemId = itemInfo.getId();
+        log.info("【主线程】触发多模态全维度识别任务，物品ID: {}", itemId);
 
-       CompletableFuture.runAsync(() -> {
+        CompletableFuture.runAsync(() -> {
             try {
                 log.info("【异步线程】开始调用 Qwen3.5-Vision 模型...");
 
-                // 1. 组装多张图片的 Media 列表
-                List<Media> mediaList = new java.util.ArrayList<>();
+                // 1. 组装多张图片的 Media 列表 (跟你之前的代码一样)
+               List<Media> mediaList = new ArrayList<>();
                 if (imageUrls != null && !imageUrls.isEmpty()) {
                     for (String url : imageUrls) {
-                        // 优雅的路径映射：将 /images/items/xxx.jpg 转换为 items/xxx.jpg
                         String relativePath = url.replaceFirst(Constant.IMAGE_PATH_PREFIX_REGEX, "");
-                        // 拼接绝对路径：D:/upload/ + items/xxx.jpg
                         String physicalPath = filePrefix + relativePath;
                         File imageFile = new File(physicalPath);
 
                         if (imageFile.exists()) {
-                            org.springframework.core.io.FileSystemResource resource = new org.springframework.core.io.FileSystemResource(imageFile);
-                            mediaList.add(new Media(org.springframework.util.MimeTypeUtils.IMAGE_JPEG, resource));
-                        } else {
-                            log.warn("【异步线程】找不到本地图片文件，跳过该图: {}", physicalPath);
+                           FileSystemResource resource = new FileSystemResource(imageFile);
+                            mediaList.add(new Media(
+                                    MimeTypeUtils.IMAGE_JPEG, resource));
                         }
                     }
                 }
 
-                // 如果连一张有效图片都没找到，且用户也没写描述，就直接终止
-                if (mediaList.isEmpty() && cn.hutool.core.util.StrUtil.isBlank(userDesc)) {
-                    log.warn("【异步线程】无图也无描述，跳过 AI 识别");
-                    return;
+                if (mediaList.isEmpty() && StrUtil.isBlank(userDesc)) {
+                    return; // 无图无描述，终止
                 }
 
+                // 2. 🌟 提取 ItemInfo 中的高价值字段给 AI！
+                String typeStr = itemInfo.getType().equals(ItemTypeEnum.LOST.getCode()) ? "寻物" : "拾物招领";
+                String safeName = StrUtil.isBlank(itemInfo.getItemName()) ? "未知物品" : itemInfo.getItemName();
+                String safeTitle= StrUtil.isBlank(itemInfo.getPublicDesc()) ? "无标题" : itemInfo.getPublicDesc();
+                String safeLocation = StrUtil.isBlank(itemInfo.getLocation()) ? "未知地点" : itemInfo.getLocation();
+                String safeDesc = StrUtil.isBlank(userDesc) ? "无附加描述" : userDesc;
 
-                // 2. 组装 Prompt:将用户的描述注入进去
-                String safeDesc = cn.hutool.core.util.StrUtil.isBlank(userDesc) ? "无附加描述" : userDesc;
-                String promptText = String.format(AIConstant.MULTIMODAL_EXTRACT_PROMPT, safeDesc);
+                // 🌟 新增：安全提取时间并格式化
+                // 注意：这里的 getTime() 请换成你 ItemInfo 实体类里实际的时间字段名（比如 getHappenTime 或 getCreateTime）
+                String safeTime = "未知时间";
+                if (itemInfo.getEventTime() != null) {
+                    java.time.format.DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+                    safeTime = itemInfo.getEventTime().format(formatter);
+                }
 
-                // 3. 构建多模态请求 - 将文本提示和图片列表一起传给 .user()
-                // Spring AI 的 .user() 方法支持传入 Object... 可变参数
+                // 🌟 组装 Prompt：按顺序传入 5 个参数！
+                String promptText = String.format(AIConstant.MULTIMODAL_EXTRACT_PROMPT,
+                        typeStr,safeTitle, safeName, safeLocation, safeTime, safeDesc);
+
+                log.info("【异步线程】多模态识别 Prompt：{}", promptText);
+
+                // 3. 构建多模态请求
+                 // Spring AI 的 .user() 方法支持传入 Object... 可变参数
                 String aiResponseStr = polishClient.prompt()
                         .user(u -> u.text(promptText).media(mediaList.toArray(new Media[0])))
                         .call()
                         .content();
-
-                log.info("【异步线程】AI 原始返回: {}", aiResponseStr);
-
-                // 5. 🛡️ 防御性解析并落库 (代码与之前一致)
+                log.info("【异步线程】多模态识别结果：{}", aiResponseStr);
+                // 5. 🛡️ 防御性解析并落库
                 String cleanJson = aiResponseStr.replace("```json", "").replace("```", "").trim();
-                AIExtractResultDTO aiResult =JSONUtil.toBean(cleanJson, AIExtractResultDTO.class);
+                AIExtractResultDTO aiResult = JSONUtil.toBean(cleanJson, AIExtractResultDTO.class);
 
                 if (aiResult != null) {
                     if (StrUtil.isNotBlank(aiResult.getAiCategory())) {
@@ -587,10 +600,14 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
                     if (StrUtil.isNotBlank(aiResult.getAiGeneratedDesc())) {
                         ItemDetail detailUpdate = new ItemDetail();
                         detailUpdate.setItemId(itemId);
-                        detailUpdate.setAiGeneratedDesc (StrUtil.subPre(aiResult.getAiGeneratedDesc(), 500));
+                        detailUpdate.setAiGeneratedDesc(StrUtil.subPre(aiResult.getAiGeneratedDesc(), 500));
                         itemDetailService.updateById(detailUpdate);
                     }
-                    log.info("【异步线程】多模态融合分类与描述落库成功！物品ID: {}", itemId);
+                    log.info("【异步线程】多模态融合落库成功！物品ID: {}", itemId);
+
+                    // 6. 🌟 WebSocket 通知用户
+                    String noticeMsg = String.format(WsNoticeConstant.AI_POLISH_FINISH, safeName);
+                    ChatWebSocketServer.pushSystemNotice(userId, noticeMsg);
                 }
 
             } catch (cn.hutool.json.JSONException e) {
