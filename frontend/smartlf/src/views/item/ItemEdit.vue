@@ -120,6 +120,11 @@ const locationOptions = [
 const selectedLocationPath = ref([])
 const locationDetail = ref('')
 
+const getImageUrl = (url) => {
+  if (!url) return ''
+  if (url.startsWith('http')) return url
+  return `http://localhost:8080${url}`
+}
 const parseLocationEcho = (locStr) => {
   if (!locStr) return { path: [], detail: '' }
   if (locStr.startsWith('教学楼-')) {
@@ -146,8 +151,15 @@ onMounted(async () => {
   const res = await getEditEcho(route.params.id)
   if (res.code === 1 || res.code === 200) {
     Object.assign(form, res.data)
-    fileList.value = (res.data.imagesUrlList || []).map(url => ({ url }))
+    
+    // 👇 只有这里改了！加上 getImageUrl 和 response，解决图片回显和删除问题
+    fileList.value = (res.data.imagesUrlList || []).map(url => ({ 
+      name: url,
+      url: getImageUrl(url),
+      response: { data: url } 
+    }))
 
+    // 👇 下面这些你辛辛苦苦写的逻辑，原封不动保留！
     const parsedLoc = parseLocationEcho(res.data.location)
     selectedLocationPath.value = parsedLoc.path
     locationDetail.value = parsedLoc.detail

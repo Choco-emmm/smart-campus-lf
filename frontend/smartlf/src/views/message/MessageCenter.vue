@@ -208,7 +208,7 @@
         <template v-if="activeTab === 'ai'">
           <div class="chat-window">
             <div class="chat-header"><span>🤖 AI 失物招领百事通 (基于大模型)</span></div>
-            <div class="chat-history" ref="aiChatHistoryRef">
+            <div class="chat-history" ref="aiChatHistoryRef" @click="handleMarkdownClick">
               <div v-for="msg in aiChatHistory" :key="msg.id" class="message-bubble-wrapper" :class="msg.sender === 'user' ? 'msg-right' : 'msg-left'">
                 
                 <el-avatar v-if="msg.sender === 'ai'" :size="36" src="https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png" class="chat-avatar" />
@@ -246,19 +246,26 @@
 import { marked } from 'marked'
 import { ref,reactive, onMounted, onUnmounted, nextTick, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-// 🌟 新增 MagicStick, Loading 图标
 import { ChatDotRound, Bell, ChatSquare, ArrowRight, Stamp, Unlock, Clock, Phone, MagicStick, Loading } from '@element-plus/icons-vue'
 import { getChatSessions, getChatHistory, getCommentNotifications, getMyReceivedClaims, getMySentClaims, auditClaim, supplementClaim } from '@/api/interact'
 import { getUserInfo } from '@/api/user'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
-// 🌟 配置 marked，开启 GitHub 风格的 Markdown（支持表格）和保留单回车换行
 marked.setOptions({
   gfm: true,
   breaks: true
 })
+const handleMarkdownClick = (e) => {
+  const target = e.target.closest('a')
+  if (target) {
+    const href = target.getAttribute('href')
+    if (href && href.startsWith('/')) {
+      e.preventDefault() 
+      router.push(href)  
+    }
+  }
+}
 
-// 🌟 定义 Markdown 渲染函数
 const renderMarkdown = (text) => {
   if (!text) return ''
   return marked.parse(text)
@@ -394,26 +401,27 @@ const sendMsg = async () => {
 const handleEnter = (e) => { !e.shiftKey ? sendMsg() : (inputMessage.value += '\n') }
 const scrollToBottom = () => { nextTick(() => { if (chatHistoryRef.value) chatHistoryRef.value.scrollTop = chatHistoryRef.value.scrollHeight }) }
 
-// ==========================================
-// 🌟 AI 会话核心逻辑区
-// ==========================================
 const aiChatHistoryRef = ref(null)
 const aiInputMessage = ref('')
 const aiSending = ref(false)
 
-// 1. 生成唯一 SessionId 以利用后端的记忆体
 const generateUUID = () => window.crypto?.randomUUID ? crypto.randomUUID() : (Math.random().toString(36).substring(2) + Date.now().toString(36))
 const aiSessionId = ref(generateUUID())
 
 const aiChatHistory = ref([
-  { id: 1, sender: 'ai', content: '你好！我是校园失物招领专属 AI 小助手。你可以问我寻物技巧、失物招领流程，或者让我帮你写一段清晰的招领描述~', loading: false }
+  { 
+    id: 1, 
+    sender: 'ai', 
+    content: '你好！我是 **SmartLF 小助手**，校园失物招领平台的官方智能客服。你可以向我描述丢失或捡到的物品，我会帮你在系统中进行精准检索哦！', 
+    loading: false 
+  }
 ])
 
 const scrollToAiBottom = () => { nextTick(() => { if (aiChatHistoryRef.value) aiChatHistoryRef.value.scrollTop = aiChatHistoryRef.value.scrollHeight }) }
 
 const clearAiSession = () => {
   ElMessageBox.confirm('确定要清空与 AI 的当前对话记忆吗？', '提示', { type: 'warning' }).then(() => {
-    aiSessionId.value = generateUUID() // 刷新 ID 即可斩断后端的 ChatMemory
+    aiSessionId.value = generateUUID() 
     aiChatHistory.value = [{ id: Date.now(), sender: 'ai', content: '记忆已清空，我们重新开始吧！', loading: false }]
   }).catch(() => {})
 }
@@ -424,7 +432,6 @@ const sendAiMsg = async () => {
   aiInputMessage.value = ''
   aiChatHistory.value.push({ id: Date.now(), sender: 'user', content: userText })
 
-  // 🌟 修改点 1: 使用 reactive 定义消息对象，使其自身具备响应式
   const aiMsgObj = reactive({ 
     id: Date.now() + 1, 
     sender: 'ai', 
@@ -452,20 +459,25 @@ const sendAiMsg = async () => {
       
       buffer += decoder.decode(value, { stream: true })
       
-      // 🌟 修改点 2: 增强解析逻辑，处理可能出现的 \r\n (Windows) 换行符
       const events = buffer.split(/\n\n|\r\n\r\n/)
       buffer = events.pop() 
 
       for (const event of events) {
-        if (aiMsgObj.loading) aiMsgObj.loading = false // 收到第一行数据时关闭 loading
+        if (aiMsgObj.loading) aiMsgObj.loading = false 
         
         const lines = event.split(/\r?\n/)
+        const dataLines = [] 
+        
         for (const line of lines) {
           if (line.startsWith('data:')) {
             let text = line.substring(5)
             if (text.startsWith(' ')) text = text.substring(1) 
-            aiMsgObj.content += text // 🌟 这里修改的是 reactive 对象，UI 会实时跳字
+            dataLines.push(text) 
           }
+        }
+        
+        if (dataLines.length > 0) {
+          aiMsgObj.content += dataLines.join('\n') 
         }
       }
       scrollToAiBottom()
@@ -478,7 +490,6 @@ const sendAiMsg = async () => {
   }
 }
 const handleAiEnter = (e) => { !e.shiftKey ? sendAiMsg() : (aiInputMessage.value += '\n') }
-// ==========================================
 
 const fetchNotices = async () => {
   noticeLoading.value = true
@@ -607,15 +618,74 @@ onUnmounted(() => {
 .session-info { flex: 1; margin-left: 12px; overflow: hidden; }
 .session-header { display: flex; align-items: center; height: 100%; }
 .nickname { font-weight: 500; color: #1d2129; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 15px; }
-.main-content { flex: 1; background: #fff; overflow: hidden; }
+
+/* 🌟 主内容区与聊天窗口美化 */
+.main-content { flex: 1; background: #fff; overflow: hidden; display: flex; flex-direction: column; }
+.empty-chat { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #909399; }
 .chat-window, .claim-window { height: 100%; display: flex; flex-direction: column; }
-.chat-history { flex: 1; padding: 20px; overflow-y: auto; background-color: #f7f8fa; }
-.message-bubble-wrapper { display: flex; margin-bottom: 20px; }
+.chat-header { padding: 15px 20px; font-size: 16px; font-weight: bold; border-bottom: 1px solid #ebeef5; background: #fff; z-index: 10; }
+.chat-history { flex: 1; padding: 20px; overflow-y: auto; background-color: #f7f8fa; scroll-behavior: smooth; }
+
+/* 🌟 聊天输入框区域美化 */
+.chat-input-area { 
+  padding: 15px 20px; 
+  background: #fff; 
+  border-top: 1px solid #ebeef5; 
+}
+.chat-input-area :deep(.el-textarea__inner) {
+  border-radius: 8px;
+  background-color: #f2f3f5;
+  border: none;
+  box-shadow: none;
+  padding: 12px;
+  font-size: 14px;
+}
+.chat-input-area :deep(.el-textarea__inner:focus) {
+  background-color: #fff;
+  box-shadow: 0 0 0 1px #409eff;
+}
+.input-action { 
+  margin-top: 10px; 
+  display: flex; 
+  justify-content: flex-end; 
+  gap: 10px;
+}
+
+/* 🌟 通用聊天气泡美化 */
+.message-bubble-wrapper { display: flex; margin-bottom: 24px; align-items: flex-start; }
 .msg-right { justify-content: flex-end; }
-.bubble { padding: 10px 14px; border-radius: 8px; font-size: 14px; max-width: 70%; line-height: 1.5; }
-.bubble-other { background: #fff; color: #1d2129; border: 1px solid #e5e6eb; }
-.bubble-me { background: #1e80ff; color: #fff; }
-.bubble-time { font-size: 11px; color: #c0c4cc; margin-top: 4px; text-align: center; width: 100%; display: block; clear: both; }
+.bubble-content {
+  max-width: 70%;
+  display: flex;
+  flex-direction: column;
+  margin: 0 12px;
+}
+.msg-right .bubble-content { align-items: flex-end; }
+.msg-left .bubble-content { align-items: flex-start; }
+.chat-avatar { flex-shrink: 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+
+/* 🌟 气泡本体美化 */
+.bubble { 
+  padding: 12px 16px; 
+  border-radius: 12px; 
+  font-size: 14px; 
+  line-height: 1.6; 
+  word-break: break-word; 
+  box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+}
+.bubble-other { 
+  background: #fff; 
+  color: #1d2129; 
+  border: 1px solid #ebeef5; 
+  border-top-left-radius: 2px; /* 聊天气泡的小尖角效果 */
+}
+.bubble-me { 
+  background: #409eff; 
+  color: #fff; 
+  border-top-right-radius: 2px;
+}
+.bubble-time { font-size: 11px; color: #c0c4cc; margin-top: 6px; }
+
 .notice-list { padding: 20px; overflow-y: auto; }
 .notice-card { margin-bottom: 12px; cursor: pointer; border-radius: 10px; }
 .notice-card :deep(.el-card__body) { display: flex; justify-content: space-between; align-items: center; }
@@ -637,58 +707,82 @@ onUnmounted(() => {
 .expire-time-text { font-size: 13px; color: #909399; margin-top: 8px; border-top: 1px dashed #e1f3d8; padding-top: 8px; font-weight: normal; display: flex; align-items: center; gap: 4px;}
 .code { color: #f56c6c; font-size: 18px; margin-left: 5px; letter-spacing: 1px; }
 .claim-item-footer { text-align: right; }
+
 /* ==================================== */
 /* 🌟 AI Markdown 专属精美排版样式 */
 /* ==================================== */
 .ai-markdown-bubble {
   line-height: 1.6;
-  white-space: normal !important; /* 覆盖原来的 pre-wrap 防止空隙过大 */
+  white-space: normal !important; 
   max-width: 100%;
-  overflow-x: auto; /* 表格过长时允许横向滚动 */
+  overflow-x: auto; 
 }
+:deep(.markdown-body p) { margin: 6px 0; }
+:deep(.markdown-body strong) { font-weight: 600; color: #1d2129; }
 
-/* 基础段落和连接 */
-:deep(.markdown-body p) { margin: 5px 0; }
-:deep(.markdown-body a) { color: #409eff; text-decoration: none; }
-:deep(.markdown-body a:hover) { text-decoration: underline; }
-:deep(.markdown-body strong) { font-weight: bold; color: #303133; }
-:deep(.markdown-body ul), :deep(.markdown-body ol) { padding-left: 20px; margin: 8px 0; }
-
-/* 🌟 精美表格样式 */
+/* 高颜值表格 */
 :deep(.markdown-body table) {
-  border-collapse: collapse;
   width: 100%;
-  margin: 12px 0;
+  border-collapse: separate; 
+  border-spacing: 0;
+  margin: 15px 0;
   background-color: #fff;
-  border-radius: 4px;
-  overflow: hidden;
-}
-:deep(.markdown-body th), :deep(.markdown-body td) {
+  border-radius: 8px;
   border: 1px solid #ebeef5;
-  padding: 8px 12px;
-  font-size: 14px;
-  text-align: left;
+  box-shadow: 0 2px 12px 0 rgba(0,0,0,0.04); 
+  overflow: hidden;
 }
 :deep(.markdown-body th) {
   background-color: #f5f7fa;
-  font-weight: bold;
   color: #606266;
+  font-weight: 600;
+  text-align: left;
+  padding: 12px 16px;
+  border-bottom: 1px solid #ebeef5;
 }
-:deep(.markdown-body tr:nth-child(even)) {
-  background-color: #fafafa;
+:deep(.markdown-body td) {
+  padding: 12px 16px;
+  color: #606266;
+  border-bottom: 1px solid #ebeef5;
+  transition: background-color 0.25s ease;
+}
+:deep(.markdown-body tr:nth-child(even) td) { background-color: #fafbfc; }
+:deep(.markdown-body tr:hover td) { background-color: #f0f7ff; }
+:deep(.markdown-body tr:last-child td) { border-bottom: none; }
+
+/* 按钮风格跳转链接 */
+:deep(.markdown-body td a) {
+  display: inline-block;
+  color: #409eff;
+  background: #ecf5ff;
+  border: 1px solid #b3d8ff;
+  padding: 4px 10px;
+  border-radius: 4px;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s cubic-bezier(0.645, 0.045, 0.355, 1);
+}
+:deep(.markdown-body td a:hover) {
+  color: #fff;
+  background: #409eff;
+  border-color: #409eff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.3);
 }
 
-/* 引用块和代码块 */
+/* 引用与代码 */
 :deep(.markdown-body blockquote) {
   margin: 10px 0;
-  padding: 8px 12px;
+  padding: 10px 15px;
   border-left: 4px solid #409eff;
-  background-color: #ecf5ff;
+  background-color: #f4f8ff;
   color: #606266;
+  border-radius: 0 4px 4px 0;
 }
 :deep(.markdown-body code) {
   background-color: #f4f4f5;
-  padding: 2px 6px;
+  padding: 3px 6px;
   border-radius: 4px;
   color: #f56c6c;
   font-size: 13px;

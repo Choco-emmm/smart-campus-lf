@@ -124,23 +124,24 @@
             </div>
             
             <div v-else-if="myRole === 1" class="admin-actions">
-              <el-button :type="detail.isTop ? 'info' : 'warning'" class="full-btn" @click="handleAdminToggleTop">
+              <el-button v-if="detail.status !== 3" :type="detail.isTop ? 'info' : 'warning'" class="full-btn" @click="handleAdminToggleTop">
                 {{ detail.isTop ? '取消置顶' : '一键置顶' }}
               </el-button>
-              <el-button type="danger" class="full-btn" @click="handleAdminBan">
+              
+              <el-button v-if="detail.status !== 3" type="danger" class="full-btn" @click="handleAdminBan">
                 <el-icon><Remove /></el-icon> 违规下架帖子
               </el-button>
+
               <el-button type="primary" plain class="full-btn" @click="handleContact">私聊联系</el-button>
             </div>
 
-            <div v-else class="normal-actions">
-              <el-button v-if="detail.hasSecureCheck" type="success" class="full-btn" @click="verifyDialogVisible = true">
+           <div v-else class="normal-actions">
+              <el-button v-if="detail.hasSecureCheck && detail.status === 0" type="success" class="full-btn" @click="verifyDialogVisible = true">
                  <el-icon><Stamp /></el-icon> 提交认领申请
               </el-button>
 
               <el-button type="primary" class="full-btn" @click="handleContact">私聊联系</el-button>
             </div>
-
           </div>
         </el-card>
       </div>
@@ -180,7 +181,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { PriceTag, Location, Warning, Top, Remove, MagicStick, Lock, Unlock, Loading, Clock, Stamp, Key } from '@element-plus/icons-vue' 
 import { getItemDetail, deleteItem, reportItem, updateItemStatus, applyItemTop } from '@/api/item'
-import { getCommentList, addComment, submitClaim } from '@/api/interact' // 修改为调用 submitClaim
+import { getCommentList, addComment, submitClaim } from '@/api/interact' 
 import { getUserInfo } from '@/api/user'
 import { banItem, toggleTopByAdmin, getItemDetailByAdmin } from '@/api/admin'
 import { marked } from 'marked'
@@ -207,8 +208,8 @@ const parsedAiDesc = computed(() => {
   return marked.parse(detail.value.aiGeneratedDesc)
 })
 
-const getStatusText = (s) => ({ 0: '寻找中', 1: '锁定中', 2: '已结案' }[s] || '未知')
-const getStatusType = (s) => s === 1 ? 'warning' : (s === 2 ? 'info' : 'primary')
+const getStatusText = (s) => ({ 0: '寻找中', 1: '锁定中', 2: '已结案', 3: '违规下架' }[s] || '未知')
+const getStatusType = (s) => s === 1 ? 'warning' : (s === 2 ? 'info' : (s === 3 ? 'danger' : 'primary'))
 
 const getImageUrl = (url) => {
   if (!url) return 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
@@ -256,7 +257,6 @@ const handleStatusChange = async (val) => {
   ElMessage.success('状态已更新')
 }
 
-// ======== 核心改动：提交认领申请 ========
 const handleVerifySubmit = async () => {
   if (!verifyAnswer.value.trim()) return ElMessage.warning('请输入答案')
   verifying.value = true
@@ -273,7 +273,7 @@ const handleAdminBan = () => {
   ElMessageBox.confirm('确定要强制下架该违规帖子吗？', '管理员操作', { type: 'error' }).then(async () => {
     await banItem(detail.value.id)
     ElMessage.success('已强制下架')
-    router.replace('/')
+    fetchData() 
   }).catch(() => {})
 }
 
@@ -339,4 +339,5 @@ onMounted(() => fetchData())
 .pointer { cursor: pointer; transition: opacity 0.2s; }
 .pointer:hover { opacity: 0.8; }
 .ml-10 { margin-left: 10px; }
+.full-img { width: 100%; height: 100%; display: block; }
 </style>

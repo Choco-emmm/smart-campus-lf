@@ -749,8 +749,10 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
         // 🌟 核心条件：查目标用户的发布
         wrapper.eq(ItemInfo::getUserId, userId);
 
-        // 🌟 核心拦截：绝不能查出违规下架的帖子 (status != 3)
-        wrapper.ne(ItemInfo::getStatus, ItemStatusEnum.BANNED.getCode());
+        // 🌟 核心拦截：如果当前登录的用户身份不是管理员，绝不能查出违规下架的帖子 (status != 3)
+        if(!RoleEnum.ADMIN.getCode().equals(UserContext.getUserRole())){
+            wrapper.ne(ItemInfo::getStatus, ItemStatusEnum.BANNED.getCode());
+        }
 
         // 按创建时间倒序（最新的在最上面）
         wrapper.orderByDesc(ItemInfo::getCreateTime);
