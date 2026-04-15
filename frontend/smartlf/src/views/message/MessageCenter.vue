@@ -212,11 +212,14 @@
               <div v-for="msg in aiChatHistory" :key="msg.id" class="message-bubble-wrapper" :class="msg.sender === 'user' ? 'msg-right' : 'msg-left'">
                 
                 <el-avatar v-if="msg.sender === 'ai'" :size="36" src="https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png" class="chat-avatar" />
-                
                 <div class="bubble-content">
-                  <div class="bubble" :class="msg.sender === 'user' ? 'bubble-me' : 'bubble-other'" style="white-space: pre-wrap; line-height: 1.6;">
+                  <div v-if="msg.sender === 'user'" class="bubble bubble-me" style="white-space: pre-wrap; line-height: 1.6;">
+                    {{ msg.content }}
+                  </div>
+                  
+                  <div v-else class="bubble bubble-other ai-markdown-bubble">
                     <span v-if="msg.loading" class="typing-indicator"><el-icon class="is-loading"><Loading /></el-icon> AI 思考中...</span>
-                    <span v-else>{{ msg.content }}</span>
+                    <div v-else class="markdown-body" v-html="renderMarkdown(msg.content)"></div>
                   </div>
                 </div>
                 
@@ -240,6 +243,7 @@
 </template>
 
 <script setup>
+import { marked } from 'marked'
 import { ref,reactive, onMounted, onUnmounted, nextTick, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 // 🌟 新增 MagicStick, Loading 图标
@@ -248,6 +252,17 @@ import { getChatSessions, getChatHistory, getCommentNotifications, getMyReceived
 import { getUserInfo } from '@/api/user'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
+// 🌟 配置 marked，开启 GitHub 风格的 Markdown（支持表格）和保留单回车换行
+marked.setOptions({
+  gfm: true,
+  breaks: true
+})
+
+// 🌟 定义 Markdown 渲染函数
+const renderMarkdown = (text) => {
+  if (!text) return ''
+  return marked.parse(text)
+}
 const route = useRoute()
 const router = useRouter()
 const activeTab = ref('chat') 
@@ -622,4 +637,60 @@ onUnmounted(() => {
 .expire-time-text { font-size: 13px; color: #909399; margin-top: 8px; border-top: 1px dashed #e1f3d8; padding-top: 8px; font-weight: normal; display: flex; align-items: center; gap: 4px;}
 .code { color: #f56c6c; font-size: 18px; margin-left: 5px; letter-spacing: 1px; }
 .claim-item-footer { text-align: right; }
+/* ==================================== */
+/* 🌟 AI Markdown 专属精美排版样式 */
+/* ==================================== */
+.ai-markdown-bubble {
+  line-height: 1.6;
+  white-space: normal !important; /* 覆盖原来的 pre-wrap 防止空隙过大 */
+  max-width: 100%;
+  overflow-x: auto; /* 表格过长时允许横向滚动 */
+}
+
+/* 基础段落和连接 */
+:deep(.markdown-body p) { margin: 5px 0; }
+:deep(.markdown-body a) { color: #409eff; text-decoration: none; }
+:deep(.markdown-body a:hover) { text-decoration: underline; }
+:deep(.markdown-body strong) { font-weight: bold; color: #303133; }
+:deep(.markdown-body ul), :deep(.markdown-body ol) { padding-left: 20px; margin: 8px 0; }
+
+/* 🌟 精美表格样式 */
+:deep(.markdown-body table) {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 12px 0;
+  background-color: #fff;
+  border-radius: 4px;
+  overflow: hidden;
+}
+:deep(.markdown-body th), :deep(.markdown-body td) {
+  border: 1px solid #ebeef5;
+  padding: 8px 12px;
+  font-size: 14px;
+  text-align: left;
+}
+:deep(.markdown-body th) {
+  background-color: #f5f7fa;
+  font-weight: bold;
+  color: #606266;
+}
+:deep(.markdown-body tr:nth-child(even)) {
+  background-color: #fafafa;
+}
+
+/* 引用块和代码块 */
+:deep(.markdown-body blockquote) {
+  margin: 10px 0;
+  padding: 8px 12px;
+  border-left: 4px solid #409eff;
+  background-color: #ecf5ff;
+  color: #606266;
+}
+:deep(.markdown-body code) {
+  background-color: #f4f4f5;
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: #f56c6c;
+  font-size: 13px;
+}
 </style>

@@ -241,7 +241,7 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
         //查询新的info信息
         ItemInfo newItemInfo = this.getById(itemId);
         //调用ai润色+生成分类
-        generateMultimodalInfoAsync(newItemInfo, dto.getImagesUrlList(), dto.getPublicDesc(), currentUserId);
+        generateMultimodalInfoAsync(newItemInfo, dto.getImagesUrlList(), dto.getSemiPublicDesc(), currentUserId);
 
         log.info("物品信息更新成功，物品ID: {}, 操作人ID: {}", itemId, currentUserId);
     }
