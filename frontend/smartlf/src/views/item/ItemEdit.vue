@@ -75,7 +75,7 @@ import { reactive, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Plus } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import { getEditEcho, updateItem, uploadImage, generateAiDesc } from '@/api/item'
+import { getEditEcho, updateItem, uploadImage } from '@/api/item'
 
 const route = useRoute()
 const router = useRouter()
@@ -186,13 +186,16 @@ const onSubmit = async () => {
     return ElMessage.warning('请填写标题、物品名称及发生地点')
   }
 
+  if ((form.verifyQuestion || form.verifyAnswer || form.privateContact) && 
+      !(form.verifyQuestion && form.verifyAnswer)) {
+      return ElMessage.warning('设置隐私保护时，【核验问题】和【核验答案】不可为空！')
+  }
+
   submitting.value = true
   try {
     const res = await updateItem(form)
     if (res.code === 1 || res.code === 200) {
-      generateAiDesc(form.id).catch(e => console.error('AI润色更新失败', e))
-      
-      ElMessage.success('修改成功！AI 正在为您重新润色描述...')
+      ElMessage.success('修改成功！后台正在同步更新描述信息。')
       router.push(`/item/${form.id}`)
     }
   } finally {

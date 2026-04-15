@@ -22,6 +22,11 @@
               <span>认领申请</span>
             </el-badge>
           </el-menu-item>
+          
+          <el-menu-item index="ai">
+            <el-icon><MagicStick /></el-icon> 
+            <span>AI 助手</span>
+          </el-menu-item>
         </el-menu>
 
         <div class="session-list" v-if="activeTab === 'chat'" v-loading="sessionLoading">
@@ -200,15 +205,45 @@
           </div>
         </template>
 
+        <template v-if="activeTab === 'ai'">
+          <div class="chat-window">
+            <div class="chat-header"><span>🤖 AI 失物招领百事通 (基于大模型)</span></div>
+            <div class="chat-history" ref="aiChatHistoryRef">
+              <div v-for="msg in aiChatHistory" :key="msg.id" class="message-bubble-wrapper" :class="msg.sender === 'user' ? 'msg-right' : 'msg-left'">
+                
+                <el-avatar v-if="msg.sender === 'ai'" :size="36" src="https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png" class="chat-avatar" />
+                
+                <div class="bubble-content">
+                  <div class="bubble" :class="msg.sender === 'user' ? 'bubble-me' : 'bubble-other'" style="white-space: pre-wrap; line-height: 1.6;">
+                    <span v-if="msg.loading" class="typing-indicator"><el-icon class="is-loading"><Loading /></el-icon> AI 思考中...</span>
+                    <span v-else>{{ msg.content }}</span>
+                  </div>
+                </div>
+                
+                <el-avatar v-if="msg.sender === 'user'" :size="36" :src="getImageUrl(myAvatar)" class="chat-avatar" />
+              </div>
+            </div>
+            
+            <div class="chat-input-area">
+              <el-input v-model="aiInputMessage" type="textarea" :rows="4" placeholder="问问 AI 怎么找东西、或者失物招领的注意事项..." resize="none" @keydown.enter.prevent="handleAiEnter" />
+              <div class="input-action">
+                <el-button @click="clearAiSession">清空记忆</el-button>
+                <el-button type="primary" :loading="aiSending" @click="sendAiMsg">发 送</el-button>
+              </div>
+            </div>
+          </div>
+        </template>
+
       </div>
     </el-card>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, nextTick, computed } from 'vue'
+import { ref,reactive, onMounted, onUnmounted, nextTick, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ChatDotRound, Bell, ChatSquare, ArrowRight, Stamp, Unlock, Clock, Phone } from '@element-plus/icons-vue'
+// 🌟 新增 MagicStick, Loading 图标
+import { ChatDotRound, Bell, ChatSquare, ArrowRight, Stamp, Unlock, Clock, Phone, MagicStick, Loading } from '@element-plus/icons-vue'
 import { getChatSessions, getChatHistory, getCommentNotifications, getMyReceivedClaims, getMySentClaims, auditClaim, supplementClaim } from '@/api/interact'
 import { getUserInfo } from '@/api/user'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -245,11 +280,9 @@ const getImageUrl = (url) => {
 const totalChatUnread = computed(() => sessionList.value.reduce((sum, s) => sum + s.unreadCount, 0))
 const totalNoticeUnread = computed(() => noticeList.value.reduce((sum, n) => sum + n.unreadCount, 0))
 
-// 🌟 动态计算：只要有需要我处理的单子（无论是作为帖主还是申请人），就亮侧边栏红点
 const hasUnprocessedClaim = computed(() => {
   const receivedNeedsAction = receivedClaims.value.some(c => c.status === 0 || c.status === 4)
   const sentNeedsAction = sentClaims.value.some(c => c.status === 3)
-  
   return receivedNeedsAction || sentNeedsAction
 })
 
@@ -271,8 +304,10 @@ const handleMenuSelect = (index) => {
   } else if (index === 'claim') {
     fetchClaims()
     reportActiveWindow(null)
+  } else if (index === 'ai') {
+    reportActiveWindow(null)
+    scrollToAiBottom()
   }
-  // 🌟 点击侧边栏任意菜单时，去刷新一下顶部导航栏的红点状态
   window.dispatchEvent(new Event('refresh-unread'))
 }
 
@@ -290,11 +325,9 @@ const selectSession = async (session) => {
   currentTargetId.value = session.targetUserId
   currentTargetName.value = session.targetNickname
   currentTargetAvatar.value = session.targetAvatar 
-  
   reportActiveWindow(currentTargetId.value)
 
   const hasUnreadCount = session.unreadCount
-
   historyLoading.value = true
   try {
     const res = await getChatHistory(currentTargetId.value)
@@ -325,13 +358,11 @@ const checkQueryAndSelect = () => {
 
 const sendMsg = async () => {
   if (!inputMessage.value.trim() || !currentTargetId.value) return
-  
   const content = inputMessage.value.trim()
   const msgData = { type: 'chat', receiverId: currentTargetId.value, content: content }
 
   if (!window.globalWs || window.globalWs.readyState !== WebSocket.OPEN) {
-    ElMessage.error('聊天服务未连接，请刷新页面')
-    return
+    return ElMessage.error('聊天服务未连接，请刷新页面')
   }
 
   sending.value = true
@@ -348,6 +379,92 @@ const sendMsg = async () => {
 const handleEnter = (e) => { !e.shiftKey ? sendMsg() : (inputMessage.value += '\n') }
 const scrollToBottom = () => { nextTick(() => { if (chatHistoryRef.value) chatHistoryRef.value.scrollTop = chatHistoryRef.value.scrollHeight }) }
 
+// ==========================================
+// 🌟 AI 会话核心逻辑区
+// ==========================================
+const aiChatHistoryRef = ref(null)
+const aiInputMessage = ref('')
+const aiSending = ref(false)
+
+// 1. 生成唯一 SessionId 以利用后端的记忆体
+const generateUUID = () => window.crypto?.randomUUID ? crypto.randomUUID() : (Math.random().toString(36).substring(2) + Date.now().toString(36))
+const aiSessionId = ref(generateUUID())
+
+const aiChatHistory = ref([
+  { id: 1, sender: 'ai', content: '你好！我是校园失物招领专属 AI 小助手。你可以问我寻物技巧、失物招领流程，或者让我帮你写一段清晰的招领描述~', loading: false }
+])
+
+const scrollToAiBottom = () => { nextTick(() => { if (aiChatHistoryRef.value) aiChatHistoryRef.value.scrollTop = aiChatHistoryRef.value.scrollHeight }) }
+
+const clearAiSession = () => {
+  ElMessageBox.confirm('确定要清空与 AI 的当前对话记忆吗？', '提示', { type: 'warning' }).then(() => {
+    aiSessionId.value = generateUUID() // 刷新 ID 即可斩断后端的 ChatMemory
+    aiChatHistory.value = [{ id: Date.now(), sender: 'ai', content: '记忆已清空，我们重新开始吧！', loading: false }]
+  }).catch(() => {})
+}
+
+const sendAiMsg = async () => {
+  if (!aiInputMessage.value.trim() || aiSending.value) return
+  const userText = aiInputMessage.value.trim()
+  aiInputMessage.value = ''
+  aiChatHistory.value.push({ id: Date.now(), sender: 'user', content: userText })
+
+  // 🌟 修改点 1: 使用 reactive 定义消息对象，使其自身具备响应式
+  const aiMsgObj = reactive({ 
+    id: Date.now() + 1, 
+    sender: 'ai', 
+    content: '', 
+    loading: true 
+  })
+  aiChatHistory.value.push(aiMsgObj)
+  scrollToAiBottom()
+  aiSending.value = true
+
+  try {
+    const token = localStorage.getItem('token') || ''
+    const response = await fetch(`http://localhost:8080/ai/chat/stream?sessionId=${aiSessionId.value}&message=${encodeURIComponent(userText)}`, {
+      method: 'GET',
+      headers: { 'token': token, 'Accept': 'text/event-stream' }
+    })
+
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder('utf-8')
+    let buffer = ''
+
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      
+      buffer += decoder.decode(value, { stream: true })
+      
+      // 🌟 修改点 2: 增强解析逻辑，处理可能出现的 \r\n (Windows) 换行符
+      const events = buffer.split(/\n\n|\r\n\r\n/)
+      buffer = events.pop() 
+
+      for (const event of events) {
+        if (aiMsgObj.loading) aiMsgObj.loading = false // 收到第一行数据时关闭 loading
+        
+        const lines = event.split(/\r?\n/)
+        for (const line of lines) {
+          if (line.startsWith('data:')) {
+            let text = line.substring(5)
+            if (text.startsWith(' ')) text = text.substring(1) 
+            aiMsgObj.content += text // 🌟 这里修改的是 reactive 对象，UI 会实时跳字
+          }
+        }
+      }
+      scrollToAiBottom()
+    }
+  } catch (error) {
+    aiMsgObj.loading = false
+    aiMsgObj.content += '\n\n*(连接中断)*'
+  } finally {
+    aiSending.value = false
+  }
+}
+const handleAiEnter = (e) => { !e.shiftKey ? sendAiMsg() : (aiInputMessage.value += '\n') }
+// ==========================================
+
 const fetchNotices = async () => {
   noticeLoading.value = true
   try {
@@ -362,16 +479,12 @@ const getClaimStatusType = (s) => ({ 0: 'warning', 1: 'success', 2: 'danger', 3:
 const fetchClaims = async () => {
   claimLoading.value = true
   try {
-    // 🌟 核心修改点：放弃按需加载，一次性并发拉取收到和发出的所有列表
-    // 这样侧边栏的 computed 属性随时都有完整的数据源来准确判断红点！
     const [receivedRes, sentRes] = await Promise.all([
       getMyReceivedClaims(),
       getMySentClaims()
     ])
-    
     receivedClaims.value = receivedRes.data || []
     sentClaims.value = sentRes.data || []
-    
   } catch(e) {
     console.error("加载列表失败", e)
   } finally {
@@ -390,7 +503,6 @@ const handleAudit = (id, action) => {
       await auditClaim({ claimId: id, status: action, supplementQuestion: value }) 
       ElMessage.success('已发送补充证据要求')
       fetchClaims()
-      // 审核完触发刷新全局导航栏红点
       window.dispatchEvent(new Event('refresh-unread'))
     }).catch(() => {})
     return;
@@ -401,7 +513,6 @@ const handleAudit = (id, action) => {
     await auditClaim({ claimId: id, status: action }) 
     ElMessage.success('审核操作成功')
     fetchClaims()
-    // 审核完触发刷新全局导航栏红点
     window.dispatchEvent(new Event('refresh-unread'))
   }).catch(() => {})
 }
@@ -439,7 +550,6 @@ const handleIncomingChat = (e) => {
 
 const handleIncomingNotice = () => { 
   if (activeTab.value === 'notice') fetchNotices() 
-  // 当收到系统提醒，悄悄把认领列表也拉一次，以实时更新左侧红点
   fetchClaims()
 }
 
@@ -454,7 +564,6 @@ onMounted(async () => {
   await fetchSessions()
   checkQueryAndSelect() 
   fetchNotices()
-  // 🌟 核心：页面一加载，就把认领的数据也请求一次，这样还没切到那个 Tab 左侧也能亮红点！
   fetchClaims()
 
   window.addEventListener('ws-chat-message', handleIncomingChat)

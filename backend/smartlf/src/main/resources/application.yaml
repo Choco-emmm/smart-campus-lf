@@ -6,6 +6,9 @@ spring:
     time-zone: GMT+8                  # 强制指定中国时区（极其重要，防止差 8 小时）
   ai:
     ollama:
+      embedding:
+        options:
+          model: nomic-embed-text-v2-moe
       base-url: http://localhost:11434
       chat:
         model: qwen3.5:4b
@@ -37,3 +40,6 @@ mybatis-plus:
 system:
   admin-secret-key: ${ADMIN_SECRET_KEY:QG-Studio-2026}
   file-prefix: ${SYSTEM.FILE-PREFIX:D:/upload/}
+logging:
+  level:
+    org.springframework.ai.chat.client.advisor: DEBUG

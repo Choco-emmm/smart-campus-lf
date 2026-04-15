@@ -45,6 +45,7 @@ public class ChatWebSocketServer {
     }
 
     private Long currentUserId;
+    private String token;
 
     public static boolean isOnline(Long userId) {
         return ONLINE_USERS.containsKey(userId);
@@ -55,6 +56,7 @@ public class ChatWebSocketServer {
         try {
             Claims claims = tokenAuthService.authenticateAndRenew(token);
             this.currentUserId = Long.valueOf(claims.get("userId").toString());
+            this.token=token;
             ONLINE_USERS.put(this.currentUserId, session);
             log.info("【全局 WebSocket】用户 {} 上线", this.currentUserId);
         } catch (Exception e) {
@@ -65,7 +67,28 @@ public class ChatWebSocketServer {
     }
 
     @OnMessage
-    public void onMessage(String message, Session session) {
+    public void onMessage(String message,Session session) {
+        //验权
+        try {
+            tokenAuthService.authenticateAndRenew(token);
+        } catch (Exception e) {
+            log.warn("【全局 WebSocket】用户 {} 消息验权失败: {}", this.currentUserId, e.getMessage());
+
+            // 🌟 2. 伪造一个系统级的 error 消息发给前端
+            JSONObject errorJson = new JSONObject();
+            errorJson.set(Constant.MSG_TYPE_KEY, "error");
+            errorJson.set("code", 401);
+            errorJson.set("message", "登录已失效，请重新登录");
+
+            try {
+               session.getBasicRemote().sendText(errorJson.toString());
+                // 🌟 3. 发完通知后，服务端主动把这个非法的连接掐断
+                session.close();
+            } catch (Exception ioException) {
+                log.error("断开失效 WebSocket 异常", ioException);
+            }
+            return; // 直接 return，不执行后续业务逻辑
+        }
         try {
             JSONObject json = JSONUtil.parseObj(message);
             String type = json.getStr(Constant.MSG_TYPE_KEY);

@@ -1,8 +1,13 @@
 package com.choco.smartlf.config;
 
+import com.choco.smartlf.utils.AIConstant;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.client.advisor.SimpleLoggerAdvisor;
+import org.springframework.ai.chat.memory.ChatMemory;
+import org.springframework.ai.chat.memory.MessageWindowChatMemory;
 import org.springframework.ai.ollama.OllamaChatModel;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
@@ -14,13 +19,39 @@ import java.util.concurrent.ThreadPoolExecutor;
 public class AIConfiguration {
 
 
+
+
+    @Bean
+    public ChatMemory chatMemory() {
+        return MessageWindowChatMemory.builder()
+                .maxMessages(20) // 限制每个用户最多保留最近 20 条对话记录，防止 Token 爆炸
+                // 💡 注意：根据你发我的源码，如果不传 ChatMemoryRepository，
+                // 底层会自动帮我们 new 一个 InMemoryChatMemoryRepository()。所以极其省事！
+                .build();
+    }
+
+    /**
+     * 生成文章润色的模型
+     * @param model
+     * @return
+     */
     @Bean
     public ChatClient polishClient(OllamaChatModel model) {
         return ChatClient
                 .builder(model)
-                .defaultAdvisors(
-                      new SimpleLoggerAdvisor()
-                )
+                .build();
+    }
+
+  /**
+     * 创建一个 ChatClient，用于处理用户发来的问题
+     * @param model
+     * @param chatMemory
+     * @return
+     */
+    @Bean
+    public ChatClient customChatClient(ChatClient.Builder builder) {
+        return builder
+                .defaultSystem("你是一个校园失物招领平台的智能客服助手。你要温柔、耐心，只能回答与失物招领、物品找回、校园生活互助相关的问题。")
                 .build();
     }
 

@@ -83,7 +83,6 @@ import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Plus } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-// 🌟 1. 移除了旧的 generateAiDesc 接口引入
 import { publishItem, uploadImage } from '@/api/item'
 
 const router = useRouter()
@@ -153,12 +152,17 @@ const onSubmit = async () => {
     return ElMessage.warning('请填写标题、物品名称及发生地点')
   }
 
+  // 简单的联动校验：如果你填了私密信息中的一个，其他最好也要填
+  if ((form.verifyQuestion || form.verifyAnswer || form.privateContact) && 
+      !(form.verifyQuestion && form.verifyAnswer)) {
+      return ElMessage.warning('设置隐私保护时，【核验问题】和【核验答案】不可为空！')
+  }
+
   submitting.value = true
   try {
     const res = await publishItem(form)
     if (res.code === 1 || res.code === 200) {
-      // 🌟 2. 移除了前端调用 AI 的逻辑，完全交给后端幕后处理
-      ElMessage.success('发布成功！AI 正在后台为您智能提取图片特征，稍后将通过系统通知您。')
+      ElMessage.success('发布成功！AI智能助手正在后台为您生成增强描述~')
       router.push('/')
     }
   } finally {

@@ -117,18 +117,42 @@ const fetchInitialUnread = async () => {
 
 const initGlobalWebSocket = () => {
   const token = localStorage.getItem('token')
-  if (!token) return
+  console.log('🔍 [WS排查 1] 当前的 Token 是:', token)
+  
+  if (!token) {
+    console.warn('⚠️ [WS排查 2] 因为没有 Token，所以取消了 WebSocket 连接！')
+    return
+  }
 
-  const ws = new WebSocket(`ws://localhost:8080/ws/chat/${token}`)
+  const wsUrl = `ws://localhost:8080/ws/chat/${token}`
+  console.log('🚀 [WS排查 3] 准备连接的 WebSocket 地址:', wsUrl)
+  
+  const ws = new WebSocket(wsUrl)
   window.globalWs = ws 
 
   ws.onopen = () => {
+    console.log('✅ [WS排查 4] WebSocket 连接成功！后端已接通。')
     window.dispatchEvent(new Event('ws-opened'))
   }
   
   ws.onmessage = (event) => {
+    console.log('📩 [WS排查 5] 收到 WebSocket 消息:', event.data)
     const res = JSON.parse(event.data)
     const msgType = res.type || res.msgType
+
+    if (msgType === 'error' && res.code === 401) {
+      ElMessage.error(res.message || '登录状态已失效，请重新登录')
+      localStorage.removeItem('token') // 清除失效的 Token
+      
+      if (window.globalWs) {
+        window.globalWs.close()
+        window.globalWs = null
+      }
+      
+      // 强制跳转回登录页
+      router.replace('/login')
+      return 
+    }
     
     if (msgType === 'chat') {
       const msgData = res.data || res
@@ -139,7 +163,6 @@ const initGlobalWebSocket = () => {
       
     } else if (msgType === 'notice') {
       fetchInitialUnread()
-      
       const noticeContent = res.content || res.data || '您有一条新的提醒！'
       ElNotification({ 
         title: '系统通知', 
@@ -152,8 +175,13 @@ const initGlobalWebSocket = () => {
     }
   }
   
-  ws.onclose = () => {
+  ws.onclose = (e) => {
+    console.warn(`❌ [WS排查 6] WebSocket 连接已断开！状态码: ${e.code}, 原因: ${e.reason}`)
     window.globalWs = null
+  }
+
+  ws.onerror = (error) => {
+    console.error('💥 [WS排查 7] WebSocket 发生异常错误:', error)
   }
 }
 
@@ -168,6 +196,10 @@ const handleLogout = () => {
 onMounted(() => {
   fetchUserInfo()
   fetchInitialUnread()
+  
+  // 🌟 就是这句！被我弄丢的罪魁祸首，加上它页面才会去连后端！
+  initGlobalWebSocket() 
+  
   window.addEventListener('clear-chat-unread', (e) => { 
     msgUnreadCount.value = Math.max(0, msgUnreadCount.value - e.detail) 
   })

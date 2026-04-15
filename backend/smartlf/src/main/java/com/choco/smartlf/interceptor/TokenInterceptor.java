@@ -27,6 +27,11 @@ public class TokenInterceptor implements HandlerInterceptor {
 
         String token = request.getHeader("token");
 
+        // 🌟 如果 Header 里没有，再尝试从 URL 参数中获取 token（专门为 SSE 准备）
+        if (token == null || token.isEmpty()) {
+            token = request.getParameter("token");
+        }
+
         // 1. 调用统一鉴权服务 (这一步里面已经完成了续期、查封禁、记活跃等所有操作)
         Claims claims = tokenAuthService.authenticateAndRenew(token);
 
