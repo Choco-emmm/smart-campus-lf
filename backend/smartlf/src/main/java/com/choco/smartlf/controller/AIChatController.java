@@ -1,5 +1,6 @@
 package com.choco.smartlf.controller;
 
+import com.choco.smartlf.tools.SearchLostItemsTool;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
@@ -22,6 +23,8 @@ public class AIChatController {
     // 🌟 注入刚刚在 Config 里配置的全局记忆体
     private final ChatMemory chatMemory;
 
+    private final SearchLostItemsTool searchLostItemsTool;
+
     @Operation(summary = "SSE 流式对话接口", description = "返回打字机效果。需传入 sessionId 实现会话隔离")
     @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<String> chatStream(
@@ -36,10 +39,10 @@ public class AIChatController {
                 .advisors(MessageChatMemoryAdvisor.builder(chatMemory)
                         .conversationId(sessionId)
                         .build()
-//                        , SimpleLoggerAdvisor.builder().build()
+                        , SimpleLoggerAdvisor.builder().build()
                 )
+                .tools(searchLostItemsTool)
                 .stream()   // 开启 SSE 流式输出
-                .content()// 只提取文本内容
-                   .doOnNext(System.out::print);
+                .content();// 只提取文本内容
     }
 }

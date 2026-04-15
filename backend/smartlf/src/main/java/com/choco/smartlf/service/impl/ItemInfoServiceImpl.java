@@ -30,6 +30,7 @@ import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.content.Media;
 import org.springframework.ai.document.Document;
+import org.springframework.ai.vectorstore.SimpleVectorStore;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -74,6 +75,7 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
     private final ItemInfoMapper itemInfoMapper;
     private final ChatClient polishClient;
     private final StringRedisTemplate stringRedisTemplate;
+    private final SimpleVectorStore simpleVectorStore;
 
     @Autowired
     @Qualifier("aiExecutor")
@@ -569,7 +571,7 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
                 // 注意：这里的 getTime() 请换成你 ItemInfo 实体类里实际的时间字段名（比如 getHappenTime 或 getCreateTime）
                 String safeTime = "未知时间";
                 if (itemInfo.getEventTime() != null) {
-                    java.time.format.DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
                     safeTime = itemInfo.getEventTime().format(formatter);
                 }
 
@@ -605,20 +607,20 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
                         itemDetailService.updateById(detailUpdate);
                     }
                     log.info("【异步线程】多模态融合落库成功！物品ID: {}", itemId);
-                    // 🌟 新增：将物品信息组装成一条纯文本
-                    String documentContent = String.format("物品名称：%s，发生地点：%s，物品分类：%s。详细特征：%s",
-                            safeName, safeLocation, aiResult.getAiCategory(), aiResult.getAiDescription());
 
-                    // 组装 Spring AI 的 Document 对象，把帖子的 ID 藏在 Metadata（元数据）里！
-                    Document document = new Document(documentContent, java.util.Map.of("itemId", itemId));
+                    String vectorMsg = String.format(AIConstant.VECTOR_FORMATTER, typeStr,safeTitle, safeName, safeLocation, safeTime, safeDesc,aiResult.getAiCategory(), aiResult.getAiGeneratedDesc());
+                    // 1. 拼接Nomic 模型专属的被动搜索前缀,原有内容和新增内容
+                    String finalContent = StrUtil.builder().append(AIConstant.NOMIC_DOC_PREFIX).append(vectorMsg).toString();
+                    log.info("【向量库】向量库写入内容：{}", finalContent);
+                    // 3. 打包成带元数据的 Document
+                    Document document = new Document(finalContent, Map.of("itemId", itemId));
 
-                    // 交给向量库去计算向量并存储
-                    vectorStore.add(java.util.List.of(document));
+                    // 4. 向量化并加入内存
+                    simpleVectorStore.add(List.of(document));
 
-                    // 顺手保存到硬盘，防止重启丢失
-                    if (vectorStore instanceof org.springframework.ai.vectorstore.SimpleVectorStore simpleStore) {
-                        simpleStore.save(new java.io.File("D:/upload/vector_store.json"));
-                    }
+                    // 5. 🌟 核心：立刻触发本地化存档！
+                    simpleVectorStore.save(new File(AIConstant.VECTOR_STORE_FILE_PATH));
+                    log.info("【向量库】帖子 {} 已成功存入并同步至本地文件！", itemId);
 
                     log.info("【异步线程】向量知识库灌入完成！帖子ID: {}", itemId);
 
@@ -627,7 +629,7 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
                     ChatWebSocketServer.pushSystemNotice(userId, noticeMsg);
                 }
 
-            } catch (cn.hutool.json.JSONException e) {
+            } catch (JSONException e) {
                 log.error("【异步线程】AI 返回非合法 JSON，解析失败！");
             } catch (Exception e) {
                 log.error("【异步线程】AI 多模态任务执行异常", e);

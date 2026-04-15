@@ -4,57 +4,63 @@ import com.choco.smartlf.utils.AIConstant;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;
-import org.springframework.ai.embedding.
+import org.springframework.ai.tool.annotation.Tool;
+import org.springframework.ai.vectorstore.SearchRequest;
+import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cglib.core.internal.Function;
 import org.springframework.context.annotation.Description;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
-// 🌟 1. 使用 Record 接收参数，注解内的说明文字直接从常量池拉取！
+// 1. 参数记录类，纯净优雅
 record SearchItemRequest(
         @JsonPropertyDescription(AIConstant.PARAM_KEYWORD_DESC)
         String keyword
 ) {}
 
-// 🌟 2. 传统的 @Component 注解，工具描述同样来自常量池
+// 2. 将这个类交由 Spring 管理，AI 将通过名字 "searchLostItems" 呼叫它
 @Slf4j
-@Component("searchLostItems")
-@Description(AIConstant.TOOL_SEARCH_ITEM_DESC)
-public class SearchLostItemsTool implements Function<SearchItemRequest, String> {
+@Component()
+public class SearchLostItemsTool  {
 
+    public static final String TOOL_NAME = "searchLostItems";
+    // 🌟 这里只需注入 VectorStore 接口即可，因为检索操作不需要 save()，符合最小权限原则
     @Autowired
     private VectorStore vectorStore;
 
-    // 🌟 3. 传统的 OOP 覆写方法
-    @Override
-    public String apply(SearchItemRequest request) {
+    @Tool(name = "searchLostItems", description = AIConstant.TOOL_SEARCH_DESC)
+    public String search(SearchItemRequest request) {
         String rawKeyword = request.keyword();
-        log.info("【Function Calling】AI 提取的原始关键词：{}", rawKeyword);
+        log.info("【Function Calling】AI 决定查询数据库，提取关键词：{}", rawKeyword);
 
-        // 拼接 Nomic 专属的查询前缀
+        // 🌟 加上 Nomic 模型专属的主动查询前缀
         String finalQuery = AIConstant.NOMIC_QUERY_PREFIX + rawKeyword;
 
-        // 去向量库执行搜索
+        // 🌟 使用 1.1.4 官方最新规范的 SearchRequest.builder()
         List<Document> results = vectorStore.similaritySearch(
-                SearchRequest.query(finalQuery)
-                        .withTopK(3)
-                        .withSimilarityThreshold(0.5) // 新模型可能需要微调这个阈值
+                SearchRequest.builder()
+                        .query(finalQuery)
+                        .topK(3)                   // 只取最相似的前 3 条
+                        .similarityThreshold(0.4)  // 相似度必须大于 40%
+                        .build()
         );
 
-        // 没查到时，直接返回常量提示
         if (results.isEmpty()) {
-            return AIConstant.SEARCH_NOT_FOUND_MSG;
+            return "数据库中暂时没有找到相关的失物招领信息。";
         }
 
-        // 查到了，使用常量池里的格式化字符串拼接结果
+        // 把搜出来的帖子拼成一段文本，喂给 AI
         String context = results.stream()
-                .map(doc -> String.format(AIConstant.SEARCH_RESULT_ITEM_FORMAT, doc.getContent()))
+                .map(doc -> {
+                    // 从元数据获取 itemId
+                    Object itemId = doc.getMetadata().get("itemId");
+                    return String.format("【数据库记录】ID: %s, 内容详细: %s", itemId, doc.getText());
+                })
                 .collect(Collectors.joining("\n"));
-
-        // 优雅地返回组装好的文本，喂给大模型
-        return AIConstant.SEARCH_RESULT_PREFIX + context + AIConstant.SEARCH_RESULT_SUFFIX;
+        log.info("【向量库】向量库搜索结果：{}", context);
+        return AIConstant.SEARCH_RESULT_PROMPT + context+AIConstant.SEARCH_RESULT_SUFFIX;
     }
 }
