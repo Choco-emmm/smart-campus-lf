@@ -126,7 +126,7 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
         // 只要用户传了图片，或者写了初步的 publicDesc，我们都可以让 AI 去识别补全
         if (CollUtil.isNotEmpty(dto.getImagesUrlList())
                 ||StrUtil.isNotBlank(dto.getPublicDesc())) {
-            generateMultimodalInfoAsync(itemInfo, dto.getImagesUrlList(), dto.getPublicDesc(), UserContext.getUserId());
+            generateMultimodalInfoAsync(itemInfo, dto.getImagesUrlList(), dto.getSemiPublicDesc(), UserContext.getUserId());
         }
         return itemId;
     }
