@@ -23,12 +23,15 @@ import com.choco.smartlf.mapper.ItemInfoMapper;
 import com.choco.smartlf.service.*;
 import com.choco.smartlf.utils.*;
 import com.choco.smartlf.websocket.ChatWebSocketServer;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 
 import org.springframework.ai.content.Media;
 import org.springframework.ai.document.Document;
+import org.springframework.ai.util.JacksonUtils;
 import org.springframework.ai.vectorstore.SimpleVectorStore;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -36,6 +39,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.http.codec.json.Jackson2JsonDecoder;
+import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.MimeTypeUtils;
@@ -886,13 +891,16 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
 
         // 4. 解析结果
         String cleanJson = aiResponseStr.replace("```json", "").replace("```", "").trim();
-        // 1. 先安全解析成通用的 JSONObject
-        JSONObject jsonObj = JSONUtil.parseObj(cleanJson);
-        // 2. 自己 new 这个 record（彻底绕过反射坑！）
-        AIExtractResultDTO aiResult = new AIExtractResultDTO(
-                jsonObj.getStr("aiCategory"),
-                jsonObj.getStr("aiGeneratedDesc")
-        );
+// 2. 🌟 核心破局：使用 Spring 原生 Jackson 直接反序列化为 Record！
+        AIExtractResultDTO aiResult = null;
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            // 这行代码对 Record 的支持是像素级完美的！
+            aiResult = objectMapper.readValue(cleanJson, AIExtractResultDTO.class);
+        } catch (Exception e) {
+            log.error("【Jackson 解析失败】无法将 JSON 转为 Record！原文: {}", cleanJson, e);
+            return null;
+        }
 
             // 5. 更新数据库 (修复了你之前漏掉右括号的 Bug，并使用了 record 的读取方式)
             if (StrUtil.isNotBlank(aiResult.aiCategory())) {

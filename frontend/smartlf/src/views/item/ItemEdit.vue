@@ -152,14 +152,17 @@ onMounted(async () => {
   if (res.code === 1 || res.code === 200) {
     Object.assign(form, res.data)
     
-    // 👇 只有这里改了！加上 getImageUrl 和 response，解决图片回显和删除问题
-    fileList.value = (res.data.imagesUrlList || []).map(url => ({ 
+    // 🌟 核心修复1：如果后端传回的 imagesUrlList 是 null，强制给它一个空数组，防止后面 push 报错
+    form.imagesUrlList = res.data.imagesUrlList || []
+    
+    // 解决图片回显和删除问题
+    fileList.value = form.imagesUrlList.map(url => ({ 
       name: url,
       url: getImageUrl(url),
       response: { data: url } 
     }))
 
-    // 👇 下面这些你辛辛苦苦写的逻辑，原封不动保留！
+    // 你辛辛苦苦写的逻辑，原封不动保留！
     const parsedLoc = parseLocationEcho(res.data.location)
     selectedLocationPath.value = parsedLoc.path
     locationDetail.value = parsedLoc.detail
@@ -174,6 +177,10 @@ onMounted(async () => {
 const handleUpload = async (options) => {
   const res = await uploadImage(options.file)
   if (res.code === 1 || res.code === 200) {
+    // 🌟 核心修复2：双重保险，如果由于某些原因不是数组，初始化为数组
+    if (!form.imagesUrlList) {
+      form.imagesUrlList = []
+    }
     form.imagesUrlList.push(res.data)
     ElMessage.success('图片上传成功')
   }
@@ -181,7 +188,10 @@ const handleUpload = async (options) => {
 
 const handleRemove = (file) => {
   const url = file.url || file.response?.data
-  form.imagesUrlList = form.imagesUrlList.filter(u => u !== url)
+  // 移除图片时也加个保护
+  if (form.imagesUrlList) {
+    form.imagesUrlList = form.imagesUrlList.filter(u => u !== url)
+  }
 }
 
 const onSubmit = async () => {
