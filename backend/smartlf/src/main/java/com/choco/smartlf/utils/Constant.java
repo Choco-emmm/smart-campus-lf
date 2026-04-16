@@ -82,4 +82,10 @@ public class Constant {
      */
     public static final String CAPTCHA_EXPIRED = "已过期失效";
     public static final String MSG_CONTENT_KEY = "content";
+
+
+    /**
+     * 限流key前缀
+     */
+    public static final String RATE_LIMIT_KEY = "rate_limit:ai_usage:user:";
 }

@@ -24,7 +24,10 @@ public enum ResultCodeEnum {
 
     // ---- 02. 文件与通用 (2000段) ----
     INVALID_FILE(2001, "文件格式不正确或为空"),
-    FILE_UPLOAD_ERROR(2002, "文件上传失败");
+    FILE_UPLOAD_ERROR(2002, "文件上传失败"),
+
+    //ai调用达到上限
+    AI_CALL_LIMIT(2006, "AI调用达到上限");
 
     private final Integer code;
     private final String message;

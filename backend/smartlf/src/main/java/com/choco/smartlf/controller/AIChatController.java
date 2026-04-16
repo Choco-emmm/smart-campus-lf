@@ -1,5 +1,6 @@
 package com.choco.smartlf.controller;
 
+import com.choco.smartlf.annotation.AiRateLimit;
 import com.choco.smartlf.tools.SearchLostItemsTool;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -25,6 +26,7 @@ public class AIChatController {
 
     private final SearchLostItemsTool searchLostItemsTool;
 
+    @AiRateLimit
     @Operation(summary = "SSE 流式对话接口", description = "返回打字机效果。需传入 sessionId 实现会话隔离")
     @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<String> chatStream(
