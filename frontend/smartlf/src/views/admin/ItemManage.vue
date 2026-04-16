@@ -71,7 +71,7 @@
           </el-table-column>
           <el-table-column label="操作" width="220" align="center" fixed="right">
             <template #default="{ row }">
-              <el-button type="primary" link @click="openItemDetail(row.itemId)">审阅原帖</el-button>
+              <el-button type="primary" link @click="jumpToItemDetail(row.itemId)">审阅原帖</el-button>
               <template v-if="row.status === 0">
                 <el-button type="success" link @click="handleResolveTop(row.id, 0)">同意置顶</el-button>
                 <el-button type="danger" link @click="handleResolveTop(row.id, 1)">拒绝</el-button>
@@ -91,16 +91,19 @@
       <div v-if="currentReport" v-loading="reportDetailLoading">
         <el-descriptions :column="1" border size="default">
           <el-descriptions-item label="举报单ID">{{ currentReport.reportId }}</el-descriptions-item>
+          
           <el-descriptions-item label="举报人">
             <el-link type="primary" @click="goToProfile(currentReport.reporterId)">
-              {{ currentReport.reporterNickname }} (ID: {{ currentReport.reporterId }})
+              {{ currentReport.reporterNickname || '未知用户' }}
             </el-link>
           </el-descriptions-item>
+
           <el-descriptions-item label="关联原帖">
-             <el-link type="danger" @click="openItemDetail(currentReport.itemId)">
-               【{{ currentReport.itemTitle }}】 - 点击审阅原帖内容
+             <el-link type="danger" @click="jumpToItemDetail(currentReport.itemId)">
+               【{{ currentReport.itemTitle }}】 - 点击跳转查看详情(可审阅发帖人)
              </el-link>
           </el-descriptions-item>
+
         </el-descriptions>
         
         <div class="long-reason-box">
@@ -113,40 +116,6 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="detailDialogVisible" title="原帖信息审阅" width="600px" destroy-on-close>
-      <div v-loading="detailLoading" class="preview-detail" v-if="currentItem">
-        <div class="preview-header">
-          <el-tag :type="currentItem.type === 0 ? 'danger' : 'success'">{{ currentItem.type === 0 ? '丢失' : '拾取' }}</el-tag>
-          <h3 class="preview-title">{{ currentItem.publicDesc }}</h3>
-        </div>
-        <el-descriptions :column="1" border size="small" style="margin-top: 15px;">
-          <el-descriptions-item label="物品名称">{{ currentItem.itemName }}</el-descriptions-item>
-          <el-descriptions-item label="发生地点">{{ currentItem.location }}</el-descriptions-item>
-          <el-descriptions-item label="发布者">{{ currentItem.publisherNickname }} (ID: {{ currentItem.userId }})</el-descriptions-item>
-          <el-descriptions-item label="详细描述">{{ currentItem.semiPublicDesc || '无' }}</el-descriptions-item>
-          <el-descriptions-item label="当前状态">
-             <el-tag size="small" :type="currentItem.status === 3 ? 'danger' : 'info'">
-               {{ currentItem.status === 3 ? '已违规下架' : '正常' }}
-             </el-tag>
-          </el-descriptions-item>
-        </el-descriptions>
-
-        <div v-if="currentItem.imagesUrlList?.length" class="preview-images">
-          <p style="margin-bottom: 10px; color: #606266; font-size: 13px;">附图：</p>
-          <el-image 
-            v-for="img in currentItem.imagesUrlList" 
-            :key="img" 
-            :src="getImageUrl(img)" 
-            :preview-src-list="currentItem.imagesUrlList.map(i => getImageUrl(i))"
-            fit="cover" 
-            class="preview-img" 
-          />
-        </div>
-      </div>
-      <template #footer>
-        <el-button @click="detailDialogVisible = false">关闭审阅</el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
@@ -156,8 +125,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { 
   getReportPage, getReportDetail, resolveReport, 
-  getTopApplyPage, resolveTopApply, 
-  getItemDetailByAdmin 
+  getTopApplyPage, resolveTopApply
 } from '@/api/admin'
 
 const router = useRouter()
@@ -179,18 +147,20 @@ const topList = ref([])
 const topTotal = ref(0)
 const topQuery = reactive({ page: 1, pageSize: 10, status: null })
 
-// ======== 审阅弹窗状态 ========
-const detailDialogVisible = ref(false)
-const detailLoading = ref(false)
-const currentItem = ref(null)
-
 // 工具函数
 const formatTime = (t) => t ? t.replace('T', ' ').substring(0, 16) : ''
-const getImageUrl = (url) => {
-  if (!url) return ''
-  return url.startsWith('http') ? url : `http://localhost:8080${url}`
+
+// 🌟 点击跳转到对应的用户主页
+const goToProfile = (id) => {
+  if (id) router.push(`/profile/${id}`)
 }
-const goToProfile = (id) => router.push(`/profile/${id}`)
+
+// 🌟 直接跳转到帖子详情页
+const jumpToItemDetail = (itemId) => {
+  if (itemId) {
+    router.push(`/item/${itemId}`)
+  }
+}
 
 const handleTabChange = (tabName) => {
   if (tabName === 'report' && reportList.value.length === 0) fetchReportData()
@@ -252,22 +222,6 @@ const handleResolveTop = (applyId, action) => {
   }).catch(() => {})
 }
 
-// ======== 打开审阅原帖 ========
-const openItemDetail = async (itemId) => {
-  detailDialogVisible.value = true
-  detailLoading.value = true
-  currentItem.value = null
-  try {
-    const res = await getItemDetailByAdmin(itemId)
-    currentItem.value = res.data
-  } catch (e) {
-    ElMessage.error('无法获取原帖信息，可能物理数据已丢失')
-    detailDialogVisible.value = false
-  } finally {
-    detailLoading.value = false
-  }
-}
-
 onMounted(() => {
   fetchReportData()
 })
@@ -281,13 +235,7 @@ onMounted(() => {
 .pagination-wrapper { margin-top: 20px; display: flex; justify-content: center; }
 .custom-tabs :deep(.el-tabs__item) { font-size: 16px; padding: 0 25px; }
 
-/* 审阅弹窗样式 */
-.preview-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-.preview-title { margin: 0; font-size: 18px; color: #1d2129; line-height: 1.4; }
-.preview-images { margin-top: 20px; display: flex; flex-wrap: wrap; gap: 10px; }
-.preview-img { width: 100px; height: 100px; border-radius: 6px; border: 1px solid #ebeef5; cursor: pointer; }
-
-/* 🌟 长文举报理由样式 */
+/* 长文举报理由样式 */
 .long-reason-box {
   margin-top: 20px;
   padding: 15px;

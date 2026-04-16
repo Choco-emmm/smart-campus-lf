@@ -23,6 +23,8 @@ import com.choco.smartlf.service.ItemInfoService;
 import com.choco.smartlf.service.ReportRecordService;
 import com.choco.smartlf.service.UserService;
 import com.choco.smartlf.utils.UserContext;
+import com.choco.smartlf.utils.WsNoticeConstant;
+import com.choco.smartlf.websocket.ChatWebSocketServer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -124,6 +126,10 @@ public class ReportRecordServiceImpl extends ServiceImpl<ReportRecordMapper, Rep
                 }
 
                 itemInfoService.updateById(item);
+                //通知原帖主
+                User reporter = userService.getById(report.getReporterId());
+                ChatWebSocketServer.pushSystemNotice(reporter.getId(),String.format(WsNoticeConstant.ITEM_VERIFIED_DOWN, item.getPublicDesc()));
+
                 log.info("举报核实联动：物品ID {} 已被违规下架", item.getId());
             }
 

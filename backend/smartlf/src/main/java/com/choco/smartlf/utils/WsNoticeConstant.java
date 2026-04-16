@@ -38,6 +38,14 @@ public class WsNoticeConstant {
     public static final String NEW_PRIVATE_MESSAGE = "✉️ 私信提醒：您收到了一条来自【%s】的新私信。";
 
 
+
+    /**
+     * 帖子被核实下架了
+     * 参数 1: 帖子标题
+     */
+    public static final String ITEM_VERIFIED_DOWN = "⚠️ 帖子下架提醒：您的帖子【%s】已被管理员核实为违规，已下架。";
+
+
     // ================= AI 辅助通知 (昨天加的) =================
     
     /**
