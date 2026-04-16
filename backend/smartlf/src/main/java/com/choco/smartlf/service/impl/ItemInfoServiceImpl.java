@@ -3,8 +3,6 @@ package com.choco.smartlf.service.impl;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
-import cn.hutool.json.JSONException;
-import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -14,10 +12,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.choco.smartlf.annotation.AiRateLimit;
 import com.choco.smartlf.entity.dto.*;
 import com.choco.smartlf.entity.pojo.*;
-import com.choco.smartlf.entity.vo.AdminItemDetailVO;
-import com.choco.smartlf.entity.vo.AdminStatsVO;
-import com.choco.smartlf.entity.vo.ItemDetailVO;
-import com.choco.smartlf.entity.vo.ItemListVO;
+import com.choco.smartlf.entity.vo.*;
 import com.choco.smartlf.enums.*;
 import com.choco.smartlf.exception.BusinessException;
 import com.choco.smartlf.mapper.ItemInfoMapper;
@@ -25,14 +20,12 @@ import com.choco.smartlf.service.*;
 import com.choco.smartlf.utils.*;
 import com.choco.smartlf.websocket.ChatWebSocketServer;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.json.JsonMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 
 import org.springframework.ai.content.Media;
 import org.springframework.ai.document.Document;
-import org.springframework.ai.util.JacksonUtils;
 import org.springframework.ai.vectorstore.SimpleVectorStore;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -40,8 +33,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.http.codec.json.Jackson2JsonDecoder;
-import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.MimeTypeUtils;
@@ -460,6 +451,7 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
     public AdminItemDetailVO getItemDetailByAdmin(Long id) {
         // 使用我们上一回合手写的 Mapper，无视逻辑删除强制查出底表数据！
         ItemInfo itemInfo = itemInfoMapper.getByIdForAdmin(id);
+        //管理员就不验是否刚注册了
         ItemDetailVO baseVo = buildBaseItemDetailVO(itemInfo);
 
         // 将基础 VO 转换为 Admin 专属 VO
@@ -799,8 +791,24 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
         // 组装 VO
         ItemDetailVO vo = new ItemDetailVO();
         BeanUtil.copyProperties(itemInfo, vo);
+        Long userId = UserContext.getUserId();
+        boolean isContentHidden=false;
+        //看用户是否在查看自己的帖子
+        if (userId != null && !userId.equals(itemInfo.getUserId())){
+            UserInfoVO userInfo = userService.getUserInfo(UserContext.getUserId());
+            //看用户是否为管理员
+            if(!UserContext.getUserRole().equals(RoleEnum.ADMIN.getCode())){
+                //看用户是否为刚注册(注册时间大于24小时）
 
-        if (itemDetail != null) {
+                if (LocalDateTime.now().isBefore(userInfo.getCreateTime().plusHours(Constant.NEW_USER_HOURS))){
+                    isContentHidden=true;
+                    log.info("用户 {} 在24小时内注册，内容隐藏", userId);
+                }
+            }
+
+        }
+        vo.setIsContentHidden(isContentHidden);
+        if (itemDetail != null&&!isContentHidden) {
             // 有详情信息
             vo.setSemiPublicDesc(itemDetail.getSemiPublicDesc());
             if (StrUtil.isNotBlank(itemDetail.getImagesUrl())) {

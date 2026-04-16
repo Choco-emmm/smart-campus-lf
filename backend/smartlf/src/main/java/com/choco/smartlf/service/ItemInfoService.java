@@ -52,4 +52,5 @@ public interface ItemInfoService extends IService<ItemInfo> {
     void toggleTopByAdmin(Long itemId, Integer isTop);
 
     IPage<ItemListVO> othersPublishPage(Long userId, Integer pageNum, Integer pageSize);
+
 }

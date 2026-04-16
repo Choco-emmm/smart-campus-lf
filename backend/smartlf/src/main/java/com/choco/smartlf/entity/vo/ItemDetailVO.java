@@ -44,4 +44,7 @@ public class ItemDetailVO {
     private Boolean isTop;
 
     private LocalDateTime createTime;
+
+    @Schema(description = "详细内容是否不可见(true:不可见, false:可见)")
+    private Boolean isContentHidden;
 }

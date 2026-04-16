@@ -449,6 +449,37 @@ const sendAiMsg = async () => {
       headers: { 'token': token, 'Accept': 'text/event-stream' }
     })
 
+    // 🌟 处理 HTTP 状态码限流
+    if (response.status === 429) {
+      aiMsgObj.loading = false
+      aiMsgObj.content = '⚠️ **限额提示**\n\n今日 AI 对话次数已达上限，为了保障所有同学的体验，单日请求次数有限制。请明天再来找我聊天吧！'
+      ElMessage.warning('今日 AI 助手对话次数已达上限')
+      return
+    }
+
+    // 🌟 处理业务 Code 限流 (以 JSON 形式返回的情况)
+    const contentType = response.headers.get('content-type') || ''
+    if (contentType.includes('application/json')) {
+      const resJson = await response.json()
+      if (resJson.code === 429) {
+        aiMsgObj.loading = false
+        aiMsgObj.content = `⚠️ **限额提示**\n\n${resJson.msg || '今日 AI 对话次数已达上限，请明天再试。'}`
+        ElMessage.warning(resJson.msg || '今日 AI 助手对话次数已达上限')
+        return
+      }
+      if (resJson.code !== 1 && resJson.code !== 200) {
+        aiMsgObj.loading = false
+        aiMsgObj.content = `❌ 请求失败：${resJson.msg || '未知错误'}`
+        return
+      }
+    }
+
+    if (!response.ok) {
+      aiMsgObj.loading = false
+      aiMsgObj.content = '❌ 服务器开小差了，请稍后再试'
+      return
+    }
+
     const reader = response.body.getReader()
     const decoder = new TextDecoder('utf-8')
     let buffer = ''

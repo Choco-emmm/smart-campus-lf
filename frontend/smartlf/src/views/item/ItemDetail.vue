@@ -37,9 +37,16 @@
             <div class="info-item"><el-icon><Location /></el-icon> 地点：{{ detail.location }}</div>
           </div>
           
-          <div class="desc-content">{{ detail.semiPublicDesc || '楼主暂无详细描述' }}</div>
+          <div v-if="detail.isContentHidden" class="content-hidden-placeholder">
+            <el-icon class="lock-icon"><Lock /></el-icon>
+            <p>详细描述及细节已隐藏</p>
+            <span>为了平台安全，新注册未满 24 小时的用户暂不可见。请在注册满 24 小时后再来查看。</span>
+          </div>
+          <div v-else class="desc-content">
+            {{ detail.semiPublicDesc || '楼主暂无详细描述' }}
+          </div>
 
-          <div class="ai-desc-container">
+          <div v-if="!detail.isContentHidden" class="ai-desc-container">
             <div class="ai-desc-title">
               <el-icon><MagicStick /></el-icon> AI 智能辅助描述
             </div>
@@ -60,7 +67,14 @@
             </el-descriptions>
           </div>
 
-          <div class="image-gallery" v-if="detail.imagesUrlList?.length">
+          <div v-if="detail.isContentHidden" class="image-hidden-placeholder">
+            <el-empty description="图片列表暂不可见" :image-size="80">
+              <template #extra>
+                <span class="hint-text">注册未满 24 小时，图片已自动屏蔽</span>
+              </template>
+            </el-empty>
+          </div>
+          <div v-else-if="detail.imagesUrlList?.length" class="image-gallery">
             <el-carousel trigger="click" height="400px" :autoplay="false">
               <el-carousel-item v-for="img in detail.imagesUrlList" :key="img">
                 <el-image :src="getImageUrl(img)" fit="contain" class="full-img" :preview-src-list="detail.imagesUrlList.map(i => getImageUrl(i))" />
@@ -204,7 +218,7 @@ const verifyAnswer = ref('')
 const verifying = ref(false)
 
 const parsedAiDesc = computed(() => {
-  if (!detail.value || !detail.value.aiGeneratedDesc) return ''
+  if (!detail.value || !detail.value.aiGeneratedDesc || detail.value.isContentHidden) return ''
   return marked.parse(detail.value.aiGeneratedDesc)
 })
 
@@ -326,6 +340,28 @@ onMounted(() => fetchData())
 .secure-badge { display: inline-flex; align-items: center; gap: 6px; background-color: #fdf6ec; color: #e6a23c; padding: 4px 10px; border-radius: 4px; font-size: 13px; font-weight: bold; margin-bottom: 12px; }
 .info-bar { display: flex; flex-wrap: wrap; gap: 24px; padding: 16px; background: #f7f8fa; border-radius: 8px; }
 .info-item { display: flex; align-items: center; gap: 4px; color: #4e5969; font-size: 15px; }
+
+/* 🌟 内容隐藏样式 */
+.content-hidden-placeholder {
+  margin: 30px 0;
+  padding: 30px;
+  background: #f5f7fa;
+  border-radius: 8px;
+  text-align: center;
+  border: 1px dashed #dcdfe6;
+}
+.lock-icon { font-size: 32px; color: #909399; margin-bottom: 10px; }
+.content-hidden-placeholder p { font-size: 16px; color: #606266; font-weight: bold; margin-bottom: 8px; }
+.content-hidden-placeholder span { font-size: 13px; color: #909399; }
+
+.image-hidden-placeholder {
+  margin-top: 20px;
+  background: #fafafa;
+  border-radius: 8px;
+  padding: 20px;
+}
+.hint-text { color: #f56c6c; font-size: 12px; }
+
 .desc-content { font-size: 16px; line-height: 1.8; color: #4e5969; margin: 20px 0; white-space: pre-wrap; }
 .ai-desc-container { margin: 20px 0; padding: 16px 20px; background: linear-gradient(to right, #f4f8ff, #f9fbff); border-left: 4px solid #1e80ff; border-radius: 6px; }
 .ai-desc-title { font-weight: bold; color: #1e80ff; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; font-size: 15px; }

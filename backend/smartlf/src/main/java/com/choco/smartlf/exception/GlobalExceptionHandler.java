@@ -30,6 +30,7 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(BusinessException.class)
     public Result<Void> handleBusinessException(BusinessException e) {
+
         log.warn("业务拦截：{}", e.getMessage());
         // 将自定义的错误码和信息包装成统一 Result 返回
         return Result.error(e.getCode(), e.getMessage());

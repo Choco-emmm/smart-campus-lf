@@ -167,7 +167,7 @@ const initGlobalWebSocket = () => {
       ElNotification({ 
         title: '系统通知', 
         message: noticeContent,
-        type: 'success', 
+        type: 'info', // 🌟 这里改成了 info，会显示醒目的蓝色 i 图标
         position: 'bottom-right',
         duration: 5000 
       })

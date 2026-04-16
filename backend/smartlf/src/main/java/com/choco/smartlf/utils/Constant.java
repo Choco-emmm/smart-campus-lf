@@ -88,4 +88,5 @@ public class Constant {
      * 限流key前缀
      */
     public static final String RATE_LIMIT_KEY = "rate_limit:ai_usage:user:";
+    public static final long NEW_USER_HOURS = 24L;
 }

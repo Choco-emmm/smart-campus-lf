@@ -27,7 +27,7 @@ public enum ResultCodeEnum {
     FILE_UPLOAD_ERROR(2002, "文件上传失败"),
 
     //ai调用达到上限
-    AI_CALL_LIMIT(2006, "AI调用达到上限");
+    AI_CALL_LIMIT(429, "AI调用达到上限");
 
     private final Integer code;
     private final String message;
