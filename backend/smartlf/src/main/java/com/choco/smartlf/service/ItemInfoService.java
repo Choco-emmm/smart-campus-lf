@@ -8,9 +8,11 @@ import com.choco.smartlf.entity.vo.AdminItemDetailVO;
 import com.choco.smartlf.entity.vo.AdminStatsVO;
 import com.choco.smartlf.entity.vo.ItemDetailVO;
 import com.choco.smartlf.entity.vo.ItemListVO;
+import com.choco.smartlf.service.impl.ItemInfoServiceImpl;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
 * @author renpe
@@ -41,7 +43,7 @@ public interface ItemInfoService extends IService<ItemInfo> {
 
     AdminItemDetailVO getItemDetailByAdmin(Long itemId);
 
-    void generateAIDesc(Long itemId);
+    ItemInfoServiceImpl.AIExtractResultDTO generateMultimodalInfo(ItemInfo itemInfo, List<String> imageUrls, String userDesc, Long userId);
 
     void generateAdminSummary();
 

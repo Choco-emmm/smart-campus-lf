@@ -1,5 +1,6 @@
 package com.choco.smartlf.entity.dto;
 
+import com.baomidou.mybatisplus.annotation.TableId;
 import com.choco.smartlf.utils.Constant;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.networknt.schema.format.RegexFormat;

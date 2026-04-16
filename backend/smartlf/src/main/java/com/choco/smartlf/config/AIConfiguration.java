@@ -63,6 +63,7 @@ public class AIConfiguration {
     public ChatClient polishClient(OllamaChatModel model) {
         return ChatClient
                 .builder(model)
+                .defaultAdvisors(SimpleLoggerAdvisor.builder().build())
                 .build();
     }
 
