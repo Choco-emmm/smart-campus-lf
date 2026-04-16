@@ -14,6 +14,7 @@ import com.choco.smartlf.entity.dto.*;
 import com.choco.smartlf.entity.pojo.*;
 import com.choco.smartlf.entity.vo.*;
 import com.choco.smartlf.enums.*;
+import com.choco.smartlf.exception.AiCallLimitException;
 import com.choco.smartlf.exception.BusinessException;
 import com.choco.smartlf.mapper.ItemInfoMapper;
 import com.choco.smartlf.service.*;
@@ -842,20 +843,19 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
             AIExtractResultDTO aiResult = null;
             try{
               aiResult= proxySelf.generateMultimodalInfo(itemInfo, imageUrls, userDesc, userId);
-            }catch (BusinessException e) {
+            }catch (AiCallLimitException e) {
                 // 🌟 精准捕获异常（不用打印红色的 Error，打 Info 就行，因为这是预期内的业务拦截）
                 log.info("【异步线程】用户 {} 触发 AI 限流，跳过润色环节。物品ID: {}", userId, itemInfo.getId());
 
                 // 🌟 核心魔法：顺着 WebSocket 把限流的消息推给前端！
-                String limitNotice = String.format("【%s】已基础发布成功！您的今日 AI 额度已用完，本次未进行 AI 智能润色。", itemInfo.getPublicDesc());
+                String limitNotice = String.format(Constant.AI_CALL_LIMIT_NOTICE, itemInfo.getPublicDesc());
                 ChatWebSocketServer.pushSystemNotice(userId, limitNotice);
 
             } catch (Exception e) {
                 // 捕获其他真正的系统崩溃异常（比如大模型宕机、网络超时）
                 log.error("【异步线程】AI 多模态任务执行发生系统异常，物品ID: {}", itemInfo.getId(), e);
-
                 // 也可以顺便通知一下前端
-                ChatWebSocketServer.pushSystemNotice(userId, "【" + itemInfo.getPublicDesc() + "】发布成功，但 AI 助手开小差了，未生成智能描述。");
+                ChatWebSocketServer.pushSystemNotice(userId,  String.format(Constant.AI_SYSTEM_ERROR_NOTICE, itemInfo.getPublicDesc()));
 
             } finally {
                 // 无论如何，帖子都必须进向量库（实现你完美的降级策略）

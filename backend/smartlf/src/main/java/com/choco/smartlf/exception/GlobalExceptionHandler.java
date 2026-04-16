@@ -1,5 +1,6 @@
 package com.choco.smartlf.exception;
 
+import cn.hutool.json.JSONUtil;
 import com.choco.smartlf.entity.Result;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.validation.FieldError;
@@ -10,6 +11,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 import jakarta.servlet.http.HttpServletResponse;
 
+import java.io.IOException;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -30,11 +32,28 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(BusinessException.class)
     public Result<Void> handleBusinessException(BusinessException e) {
-
         log.warn("业务拦截：{}", e.getMessage());
         // 将自定义的错误码和信息包装成统一 Result 返回
         return Result.error(e.getCode(), e.getMessage());
     }
+
+    /**
+     * 专门捕获 ai的限额异常
+     */
+    @ExceptionHandler(AiCallLimitException.class)
+    public void handleAiCallLimitException(AiCallLimitException e,HttpServletResponse  response) throws IOException {
+        // 1. 🌟 强行将响应通道的格式改成 JSON，并设置 UTF-8 防止中文乱码
+        response.setContentType("application/json;charset=utf-8");
+        response.setStatus(429);
+        // 3. 构建你要返回给前端的 Result 对象
+        Integer code = e.getCode() != null ? e.getCode() : 429;
+        Result<?> result = Result.error(code, e.getMessage());
+
+        // 4. 🌟 绕过 Spring，直接把 JSON 字符串写进底层输出流！
+        response.getWriter().write(JSONUtil.toJsonStr(result));
+        response.getWriter().flush();
+    }
+
 
     /**
      * 专门捕获 @Validated 参数校验失败抛出的异常

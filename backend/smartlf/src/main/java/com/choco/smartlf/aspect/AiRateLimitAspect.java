@@ -2,6 +2,7 @@ package com.choco.smartlf.aspect;
 
 import com.choco.smartlf.annotation.AiRateLimit;
 import com.choco.smartlf.enums.ResultCodeEnum;
+import com.choco.smartlf.exception.AiCallLimitException;
 import com.choco.smartlf.exception.BusinessException;
 import com.choco.smartlf.utils.Constant;
 import com.choco.smartlf.utils.UserContext;
@@ -47,7 +48,6 @@ public class AiRateLimitAspect {
             log.warn("【AI限流】用户未登录，请先登录");
             throw new BusinessException(ResultCodeEnum.UNAUTHORIZED);
         }
-        log.info("【AI限流】用户ID: {}", userId);
         // 2. 组装 Redis Key 和 获取最大限制次数
         String redisKey = Constant.RATE_LIMIT_KEY + userId;
         int maxLimit = aiRateLimit.maxCount();
@@ -65,7 +65,7 @@ public class AiRateLimitAspect {
             // 🌟 4. 如果超限，直接拉闸！抛出异常中断执行
             if (currentCount > maxLimit) {
                 log.warn("【AI限流】用户 {} 触发 AI 限流拦截，当前次数: {}/{}", userId, currentCount, maxLimit);
-                throw new BusinessException(ResultCodeEnum.AI_CALL_LIMIT);
+                throw new AiCallLimitException(ResultCodeEnum.AI_CALL_LIMIT);
             }
         }
 

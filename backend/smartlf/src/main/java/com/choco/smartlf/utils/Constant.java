@@ -89,4 +89,6 @@ public class Constant {
      */
     public static final String RATE_LIMIT_KEY = "rate_limit:ai_usage:user:";
     public static final long NEW_USER_HOURS = 24L;
+    public static final String AI_CALL_LIMIT_NOTICE = "您的帖子【%s】已发布成功！您的今日 AI 额度已用完，本次未进行 AI 智能润色。";
+    public static final String AI_SYSTEM_ERROR_NOTICE = "您的帖子【%s】发布成功，但 AI 助手开小差了，未生成智能描述。";
 }
