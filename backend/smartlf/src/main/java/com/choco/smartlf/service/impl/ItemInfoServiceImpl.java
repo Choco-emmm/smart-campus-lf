@@ -266,6 +266,10 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
         //将物品信息逻辑删除
         this.removeById(id);
         log.info("物品信息逻辑删除成功，物品ID: {}, 操作人ID: {}", id, userId);
+
+        //删除向量数据
+        this.deleteFromVector(id);
+
     }
 
     @Override
@@ -446,6 +450,8 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
         item.setStatus(ItemStatusEnum.BANNED.getCode());
         updateById(item);
         log.info("物品ID {} 已被封禁", item.getId());
+        //删除向量数据
+        this.deleteFromVector(itemId);
     }
 
     @Override
@@ -826,6 +832,19 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
         simpleVectorStore.save(new File(AIConstant.VECTOR_STORE_FILE_PATH));
 
         log.info("【向量库】帖子 {} 已成功存入并同步至本地文件！", itemId);
+
+    }
+    /**
+     * 删除内存的向量库和本地json文件里面的向量数据
+     * 传入值：itemId
+     */
+    private void deleteFromVector(Long itemId) {
+        // 清理向量库（避免 AI 还能搜到已删除的内容）
+        String documentId = String.valueOf(itemId);
+        simpleVectorStore.delete(List.of(documentId));
+
+        // 持久化
+        simpleVectorStore.save(new File(AIConstant.VECTOR_STORE_FILE_PATH));
 
     }
 }

@@ -70,7 +70,7 @@ export function generateAiDesc(itemId) {
     return request({ url: `/item/ai/generate-desc/${itemId}`, method: 'post' })
 }
 export function deleteItem(id) {
-    return request({ url: `/item/delete/${id}`, method: 'delete' })
+    return request({ url: `/item/${id}`, method: 'delete' })
 }
 export function reportItem(data) {
     return request({ url: '/item/report', method: 'post', data })

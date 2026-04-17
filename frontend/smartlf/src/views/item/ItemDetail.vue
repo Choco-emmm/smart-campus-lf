@@ -312,11 +312,21 @@ const confirmReport = async () => {
   reportDialogVisible.value = false
 }
 
+// 🌟 修复后的删除逻辑：增加 ElMessage 提醒
 const handleDelete = () => {
-  ElMessageBox.confirm('确定删除吗？', '提示').then(async () => {
-    await deleteItem(detail.value.id)
-    router.replace('/')
-  })
+  ElMessageBox.confirm('确定删除此帖吗？删除后将无法找回。', '提示', {
+    confirmButtonText: '确定删除',
+    cancelButtonText: '取消',
+    type: 'warning'
+  }).then(async () => {
+    try {
+      await deleteItem(detail.value.id)
+      ElMessage.success('删除成功')
+      router.replace('/')
+    } catch (error) {
+      // 错误已由 request.js 全局处理
+    }
+  }).catch(() => {})
 }
 
 const handleTopApply = async () => {
@@ -341,7 +351,7 @@ onMounted(() => fetchData())
 .info-bar { display: flex; flex-wrap: wrap; gap: 24px; padding: 16px; background: #f7f8fa; border-radius: 8px; }
 .info-item { display: flex; align-items: center; gap: 4px; color: #4e5969; font-size: 15px; }
 
-/* 🌟 内容隐藏样式 */
+/* 内容隐藏样式 */
 .content-hidden-placeholder {
   margin: 30px 0;
   padding: 30px;
