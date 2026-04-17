@@ -506,7 +506,7 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
         log.info("【主线程】准备提交管理员 AI 周报任务...");
 
         // 🌟 同样采用异步化处理，防止卡死定时任务调度器
-        java.util.concurrent.CompletableFuture.runAsync(() -> {
+       CompletableFuture.runAsync(() -> {
             try {
                 String content = polishClient.prompt()
                         .user(promptText)

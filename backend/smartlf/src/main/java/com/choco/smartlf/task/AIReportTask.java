@@ -15,9 +15,9 @@ public class AIReportTask {
 
     /**
      * 定期调用 AI 生成总结报告
-     * cron = "0 0 2 * * ?" 表示：每天凌晨 2 点 0 分 0 秒自动执行一次
+     * cron = "0 0 2 * * ?" 表示：每周日凌晨 2 点 0 分 0 秒自动执行一次
      */
-    @Scheduled(cron = "0 0 2 * * ?")
+    @Scheduled(cron = "0 0 2 * * 0")
     public void autoGenerateWeeklyReport() {
         log.info("【AI巡检】开始执行定时总结任务...");
         try {

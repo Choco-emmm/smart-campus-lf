@@ -41,10 +41,10 @@ public class AIConstant {
 
 
     public static String getAdminSummaryPrompt(String rawDataStr) {
-        return "你是学校安保大队长。看看最近7天丢东西的账本：\n" +
+        return "你是校园失物招领平台的巡检助手。看看最近7天丢东西的账本：\n" +
                 rawDataStr + "\n" +
                 "请写一份简单的总结报告。挑重点说（哪里最容易丢什么）。" +
-                "然后给学校提一条实际的建议（比如在哪装个失物招领箱）。200字以内。";
+                "然后给学校提一条实际的建议。200字以内。";
     }
     public static final String MULTIMODAL_EXTRACT_PROMPT = """
             你是一个校园失物招领平台的AI视觉助手。有一位同学发布了一条【%s】信息。
