@@ -31,9 +31,9 @@ public class AIChatController {
     @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<String> chatStream(
             @RequestParam String sessionId,
-            @RequestParam String message,HttpServletResponse response) {
+            @RequestParam String message) {
         // 显式告诉 Nginx/代理服务器不要缓冲此响应
-        response.setHeader("X-Accel-Buffering", "no");
+//        response.setHeader("X-Accel-Buffering", "no");
 
         return customChatClient.prompt()
                 .user(message)

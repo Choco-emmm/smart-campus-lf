@@ -14,5 +14,5 @@ public @interface AiRateLimit {
     /**
      * 默认每天最大调用次数
      */
-    int maxCount() default 2;
+    int maxCount() default 20;
 }

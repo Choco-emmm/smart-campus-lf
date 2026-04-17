@@ -36,8 +36,6 @@ public class ItemInfo {
     private Integer isTop;
     @Schema(description="置顶结束时间")
     private LocalDateTime topEndTime;
-    @Schema(description="1:高价值/敏感（强制二审）", implementation = com.choco.smartlf.enums.SensitiveEnum.class)
-    private Integer isSensitive;
     @TableLogic
     @Schema(description="逻辑删除（0:否，1:是）", implementation = com.choco.smartlf.enums.DeletedEnum.class)
     private Integer isDeleted;

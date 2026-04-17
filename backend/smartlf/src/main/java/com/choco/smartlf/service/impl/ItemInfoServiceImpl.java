@@ -479,168 +479,6 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
     }
 
 
-//    @Override
-//    @Transactional(rollbackFor = Exception.class)
-//    public void generateAIDesc(Long itemId) {
-//        // 🌟 1. 主线程：在把活儿交给异步线程前，赶紧把当前用户的 ID 拿出来存好！
-//        // （防止异步线程里拿不到 UserContext 导致空指针）
-//        Long currentUserId = UserContext.getUserId();
-//
-//        // 校验物品和权限
-//        ItemInfo item = this.getById(itemId);
-//        if (item == null) {
-//            throw new BusinessException("物品不存在");
-//        }
-//        if (!item.getUserId().equals(currentUserId)) {
-//            throw new BusinessException(ResultCodeEnum.FORBIDDEN, "只能让AI润色自己的帖子！");
-//        }
-//
-//        // 构建给 AI 的提示词
-//        String typeStr = Objects.equals(item.getType(), ItemTypeEnum.LOST.getCode()) ? ItemTypeEnum.LOST.getDescription() : ItemTypeEnum.FOUND.getDescription();
-//        String promptText = String.format(
-//                AIConstant.PROMPT_TEMPLATE_POLISH,
-//                typeStr, item.getItemName(), item.getLocation(), item.getPublicDesc()
-//        );
-//
-//        log.info("【主线程】已接收 AI 润色请求，提交至后台排队处理。物品ID: {}", itemId);
-//
-//        // 🌟 2. 异步：将耗时的调用丢给 aiExecutor 线程池
-//        java.util.concurrent.CompletableFuture.runAsync(() -> {
-//            try {
-//                log.info("【异步线程】开始调用本地大模型生成描述...");
-//                String aiResult = polishClient.prompt()
-//                        .user(promptText)
-//                        .call()
-//                        .content();
-//
-//                if (StrUtil.isNotBlank(aiResult)) {
-//                    // 3. 落库：将结果覆盖到旧数据上
-//                    ItemDetail itemDetail = itemDetailService.getById(itemId);
-//                    if (itemDetail != null) {
-//                        itemDetail.setAiGeneratedDesc(aiResult);
-//                        itemDetailService.updateById(itemDetail);
-//                        log.info("【异步线程】AI 描述生成并保存成功，物品ID: {}", itemId);
-//
-//                    }
-//                }
-//            } catch (Exception e) {
-//                log.error("【异步线程】AI 描述生成彻底失败，物品ID: {}", itemId, e);
-//            }
-//        }, aiExecutor);
-//
-//        // 主线程走到这里（耗时不到 1 毫秒）直接结束，瞬间返回给 Controller！
-//    }
-
-
-//    public void generateMultimodalInfoAsync(ItemInfo itemInfo, List<String> imageUrls, String userDesc, Long userId) {
-//        Long itemId = itemInfo.getId();
-//        log.info("【主线程】触发多模态全维度识别任务，物品ID: {}", itemId);
-//
-//        CompletableFuture.runAsync(() -> {
-//            try {
-//                log.info("【异步线程】开始调用 Qwen3.5-Vision 模型...");
-//
-//                // 1. 组装多张图片的 Media 列表 (跟你之前的代码一样)
-//               List<Media> mediaList = new ArrayList<>();
-//                if (imageUrls != null && !imageUrls.isEmpty()) {
-//                    for (String url : imageUrls) {
-//                        String relativePath = url.replaceFirst(Constant.IMAGE_PATH_PREFIX_REGEX, "");
-//                        String physicalPath = filePrefix + relativePath;
-//                        File imageFile = new File(physicalPath);
-//
-//                        if (imageFile.exists()) {
-//                           FileSystemResource resource = new FileSystemResource(imageFile);
-//                            mediaList.add(new Media(
-//                                    MimeTypeUtils.IMAGE_JPEG, resource));
-//                        }
-//                    }
-//                }
-//
-//                if (mediaList.isEmpty() && StrUtil.isBlank(userDesc)) {
-//                    return; // 无图无描述，终止
-//                }
-//
-//                // 2. 🌟 提取 ItemInfo 中的高价值字段给 AI！
-//                String typeStr = itemInfo.getType().equals(ItemTypeEnum.LOST.getCode()) ? "寻物" : "拾物招领";
-//                String safeName = StrUtil.isBlank(itemInfo.getItemName()) ? "未知物品" : itemInfo.getItemName();
-//                String safeTitle= StrUtil.isBlank(itemInfo.getPublicDesc()) ? "无标题" : itemInfo.getPublicDesc();
-//                String safeLocation = StrUtil.isBlank(itemInfo.getLocation()) ? "未知地点" : itemInfo.getLocation();
-//                String safeDesc = StrUtil.isBlank(userDesc) ? "无附加描述" : userDesc;
-//
-//                // 🌟 新增：安全提取时间并格式化
-//                // 注意：这里的 getTime() 请换成你 ItemInfo 实体类里实际的时间字段名（比如 getHappenTime 或 getCreateTime）
-//                String safeTime = "未知时间";
-//                if (itemInfo.getEventTime() != null) {
-//                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
-//                    safeTime = itemInfo.getEventTime().format(formatter);
-//                }
-//
-//                // 🌟 组装 Prompt：按顺序传入 5 个参数！
-//                String promptText = String.format(AIConstant.MULTIMODAL_EXTRACT_PROMPT,
-//                        typeStr,safeTitle, safeName, safeLocation, safeTime, safeDesc);
-//
-//                log.info("【异步线程】多模态识别 Prompt：{}", promptText);
-//
-//                // 3. 构建多模态请求
-//                 // Spring AI 的 .user() 方法支持传入 Object... 可变参数
-//                String aiResponseStr = polishClient.prompt()
-//                        .user(u -> u.text(promptText).media(mediaList.toArray(new Media[0])))
-//                        .call()
-//                        .content();
-//                log.info("【异步线程】多模态识别结果：{}", aiResponseStr);
-//                // 5. 🛡️ 防御性解析并落库
-//                String cleanJson = aiResponseStr.replace("```json", "").replace("```", "").trim();
-//                AIExtractResultDTO aiResult = JSONUtil.toBean(cleanJson, AIExtractResultDTO.class);
-//
-//                if (aiResult != null) {
-//
-//                    // 2. 更新基础信息表 (ItemInfo)
-//                    if (StrUtil.isNotBlank(aiResult.aiCategory()) {
-//                        ItemInfo infoUpdate = new ItemInfo();
-//                        infoUpdate.setId(itemId);
-//                        // StrUtil.subPre 极其安全，防止 AI 生成内容过长撑爆数据库字段
-//                        infoUpdate.setAiCategory(StrUtil.subPre(aiResult.aiCategory(), 50));
-//                        itemInfoMapper.updateById(infoUpdate);
-//                    }
-//
-//                    // 3. 更新详情表 (ItemDetail)
-//                    if (StrUtil.isNotBlank(aiResult.aiGeneratedDesc())) {
-//                        ItemDetail detailUpdate = new ItemDetail();
-//                        detailUpdate.setItemId(itemId);
-//                        detailUpdate.setAiGeneratedDesc(StrUtil.subPre(aiResult.aiGeneratedDesc(), 500));
-//                        itemDetailService.updateById(detailUpdate);
-//                    }
-//                    log.info("【异步线程】多模态融合落库成功！物品ID: {}", itemId);
-//
-//                    String vectorMsg = String.format(AIConstant.VECTOR_FORMATTER, typeStr,safeTitle, safeName, safeLocation, safeTime, safeDesc,aiResult.getAiCategory(), aiResult.getAiGeneratedDesc());
-//                    // 1. 拼接Nomic 模型专属的被动搜索前缀,原有内容和新增内容
-//                    String finalContent = StrUtil.builder().append(AIConstant.NOMIC_DOC_PREFIX).append(vectorMsg).toString();
-//                    log.info("【向量库】向量库写入内容：{}", finalContent);
-//                    // 3. 打包成带元数据的 Document
-//                    Document document = new Document(finalContent, Map.of("itemId", itemId));
-//
-//                    // 4. 向量化并加入内存
-//                    simpleVectorStore.add(List.of(document));
-//
-//                    // 5. 🌟 核心：立刻触发本地化存档！
-//                    simpleVectorStore.save(new File(AIConstant.VECTOR_STORE_FILE_PATH));
-//                    log.info("【向量库】帖子 {} 已成功存入并同步至本地文件！", itemId);
-//
-//                    log.info("【异步线程】向量知识库灌入完成！帖子ID: {}", itemId);
-//
-//                    // 6. 🌟 WebSocket 通知用户
-//                    String noticeMsg = String.format(WsNoticeConstant.AI_POLISH_FINISH, safeName);
-//                    ChatWebSocketServer.pushSystemNotice(userId, noticeMsg);
-//                }
-//
-//            } catch (JSONException e) {
-//                log.error("【异步线程】AI 返回非合法 JSON，解析失败！");
-//            } catch (Exception e) {
-//                log.error("【异步线程】AI 多模态任务执行异常", e);
-//            }
-//        }, aiExecutor);
-//    }
-
     @Override
     public void generateAdminSummary() {
         LocalDateTime sevenDaysAgo = LocalDateTime.now().minusDays(7);
@@ -977,7 +815,13 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
         log.info("【向量库】准备写入内容，模式: {}", aiResult != null ? "🚀 AI增强版" : "🛡️ 基础降级版");
 
         // 2. 打包并入库
-        Document document = new Document(finalContent, Map.of("itemId", itemId));
+        // 1. 强行把 MySQL 的 itemId 转成 String 作为向量主键
+        String documentId = String.valueOf(itemId);
+
+// 2. 打包并入库（注意这里传入了三个参数：id, content, metadata）
+        Document document = new Document(documentId, finalContent, Map.of("itemId", itemId));
+
+// 3. 执行覆盖式保存
         simpleVectorStore.add(List.of(document));
         simpleVectorStore.save(new File(AIConstant.VECTOR_STORE_FILE_PATH));
 
