@@ -851,7 +851,7 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
      * 删除内存的向量库和本地json文件里面的向量数据
      * 传入值：itemId
      */
-    private void deleteFromVector(Long itemId) {
+    public void deleteFromVector(Long itemId) {
         // 清理向量库（避免 AI 还能搜到已删除的内容）
         String documentId = String.valueOf(itemId);
         simpleVectorStore.delete(List.of(documentId));

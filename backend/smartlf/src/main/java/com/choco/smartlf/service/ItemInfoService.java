@@ -53,4 +53,6 @@ public interface ItemInfoService extends IService<ItemInfo> {
 
     IPage<ItemListVO> othersPublishPage(Long userId, Integer pageNum, Integer pageSize);
 
+    void deleteFromVector(Long itemId);
+
 }

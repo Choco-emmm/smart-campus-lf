@@ -126,6 +126,8 @@ public class ReportRecordServiceImpl extends ServiceImpl<ReportRecordMapper, Rep
                 }
 
                 itemInfoService.updateById(item);
+                //向量库删除
+                itemInfoService.deleteFromVector(item.getId());
                 //通知原帖主
                 User target = userService.getById(item.getUserId());
                 if(target!=null){
