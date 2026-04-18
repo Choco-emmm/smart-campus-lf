@@ -51,7 +51,7 @@ public class AIConstant {
             请结合以下【帖子基本信息】、【用户初步描述】以及【上传的图片】（如果有的话），严格按照JSON 格式提取特征。
             绝对不要输出任何 Markdown 标记（如 ```json），也不要返回任何多余的解释文字：
             
-            【基本信息】：帖子标题-[%s]，物品名称-[%s]，相关地点-[%s]，失物/拾取时间-[%s]
+            【基本信息】：帖子标题-[%s]，物品名称-[%s]，相关地点-[%s]，时间-[%s]
             【初步描述】：%s
             以下是JSON格式：
             {
@@ -62,7 +62,7 @@ public class AIConstant {
     public static final String VECTOR_STORE_FILE_PATH = "smartlf_vectors.json";
     public static final String VECTOR_FORMATTER= """
             这是一条【%s】帖子
-            【基本信息】：帖子标题-[%s]，物品名称-[%s]，相关地点-[%s]，失物/拾取时间-[%s]
+            【基本信息】：帖子标题-[%s]，物品名称-[%s]，相关地点-[%s]，时间-[%s]
             【初步描述】：%s,
             【大模型识别】：根据帖主的图片和文字描述自动分类-【%s】，自动生成描述-【%s】
             """;
@@ -72,7 +72,7 @@ public class AIConstant {
 
     // 🌟 AI 工具相关的提示词
     public static final String TOOL_SEARCH_DESC = "当用户想要寻找失物、查询招领帖子、或者问'有没有人捡到/丢了xxx'时，必须调用此函数进行检索。";
-    public static final String PARAM_KEYWORD_DESC = "请提取核心特征作为搜索关键词。包含：物品名称、颜色、品牌、地点。用空格分隔。不要包含'寻找'等动作词。";
+    public static final String PARAM_KEYWORD_DESC = "请提取用户行为和核心特征作为搜索关键词。行为：寻物或拾物招领。核心特征包括：物品名称、颜色、品牌、地点。用空格分隔。";
 
     public static final String SEARCH_RESULT_PROMPT= """
             已检索到相关数据，请严格按照 Markdown 表格格式回复，并生成跳转链接。\

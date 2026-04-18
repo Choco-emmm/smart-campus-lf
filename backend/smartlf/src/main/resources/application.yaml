@@ -11,6 +11,8 @@ spring:
           model: nomic-embed-text-v2-moe
       base-url: http://localhost:11434
       chat:
+        options:
+          num-ctx: 8192
         model: qwen3.5:4b
   data:
     # redis配置
