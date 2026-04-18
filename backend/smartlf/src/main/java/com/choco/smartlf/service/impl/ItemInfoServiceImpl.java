@@ -489,7 +489,8 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
     public void generateAdminSummary() {
         LocalDateTime sevenDaysAgo = LocalDateTime.now().minusDays(7);
         List<ItemInfo> recentItems = this.list(new LambdaQueryWrapper<ItemInfo>()
-                .ge(ItemInfo::getCreateTime, sevenDaysAgo));
+                .ge(ItemInfo::getCreateTime, sevenDaysAgo)
+                .ne(ItemInfo::getStatus, ItemStatusEnum.BANNED.getCode()));
 
         if (recentItems.isEmpty()) {
             return;

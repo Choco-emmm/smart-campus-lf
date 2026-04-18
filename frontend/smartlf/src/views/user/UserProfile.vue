@@ -30,7 +30,7 @@
           </template>
           
           <template v-else>
-            <el-button type="danger" plain @click="pwdDialogVisible = true">修改密码</el-button>
+            <el-button type="danger" plain @click="openPwdDialog">修改密码</el-button>
             <el-button type="primary" plain @click="openEditDialog"><el-icon><Edit /></el-icon> 编辑资料</el-button>
           </template>
         </div>
@@ -80,6 +80,25 @@
         <el-button type="primary" @click="handleUpdateUser" :loading="saving">保存修改</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="pwdDialogVisible" title="修改安全密码" width="450px" @close="resetPwdForm">
+      <el-form :model="pwdForm" :rules="pwdRules" ref="pwdFormRef" label-width="90px" size="large">
+        <el-form-item label="当前密码" prop="oldPassword">
+          <el-input v-model="pwdForm.oldPassword" type="password" show-password placeholder="请输入当前旧密码" />
+        </el-form-item>
+        <el-form-item label="新密码" prop="newPassword">
+          <el-input v-model="pwdForm.newPassword" type="password" show-password placeholder="请输入新密码 (6-20位)" />
+        </el-form-item>
+        <el-form-item label="确认密码" prop="confirmPassword">
+          <el-input v-model="pwdForm.confirmPassword" type="password" show-password placeholder="请再次确认新密码" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="pwdDialogVisible = false">取消</el-button>
+        <el-button type="danger" @click="handleUpdatePassword" :loading="pwdSaving">确认修改</el-button>
+      </template>
+    </el-dialog>
+
   </div>
 </template>
 
@@ -88,8 +107,7 @@ import { ref, onMounted, reactive } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Calendar, Location, Edit, Plus } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getUserProfile, getUserInfo, updateUserInfo } from '@/api/user'
-// 🌟 引入刚写好的 getOthersPublishPage
+import { getUserProfile, getUserInfo, updateUserInfo, checkSamePassword, updatePassword } from '@/api/user'
 import { getOthersPublishPage, uploadImage, getMyPublishPage } from '@/api/item'
 import { updateUserStatus } from '@/api/admin'
 
@@ -106,6 +124,110 @@ const editForm = reactive({ nickname: '', avatarUrl: '', phone: '', email: '' })
 const listLoading = ref(false)
 const pageParams = ref({ page: 1, pageSize: 10 })
 const saving = ref(false)
+
+// ======== 🌟 密码修改相关逻辑 ========
+const pwdDialogVisible = ref(false)
+const pwdSaving = ref(false)
+const pwdFormRef = ref(null)
+const pwdForm = reactive({
+  oldPassword: '',
+  newPassword: '',
+  confirmPassword: ''
+})
+
+// 旧密码的异步失焦校验逻辑
+const validateOldPwd = async (rule, value, callback) => {
+  if (!value) {
+    return callback(new Error('请输入当前密码'))
+  }
+  try {
+    const res = await checkSamePassword(value)
+    if (res.data === true) {
+      callback() 
+    } else {
+      callback(new Error('当前密码错误，请重新输入'))
+    }
+  } catch (error) {
+    callback(new Error('校验失败，请检查网络'))
+  }
+}
+
+// 🌟 新密码校验逻辑：判断不能与旧密码相同
+const validateNewPwd = (rule, value, callback) => {
+  if (!value) {
+    callback(new Error('请输入新密码'))
+  } else if (value.length < 6 || value.length > 20) {
+    callback(new Error('密码长度需在 6 到 20 个字符'))
+  } else if (value === pwdForm.oldPassword) {
+    // 👇 前端直接判断，不需要经过后端
+    callback(new Error('新密码不能与当前密码相同！'))
+  } else {
+    // 如果确认密码已经填了，需要触发一下确认密码的再次校验
+    if (pwdForm.confirmPassword !== '') {
+      pwdFormRef.value.validateField('confirmPassword')
+    }
+    callback()
+  }
+}
+
+// 确认密码校验逻辑
+const validateConfirmPwd = (rule, value, callback) => {
+  if (!value) {
+    callback(new Error('请再次输入新密码'))
+  } else if (value !== pwdForm.newPassword) {
+    callback(new Error('两次输入的新密码不一致!'))
+  } else {
+    callback()
+  }
+}
+
+const pwdRules = {
+  oldPassword: [
+    { required: true, validator: validateOldPwd, trigger: 'blur' }
+  ],
+  newPassword: [
+    // 🌟 应用新的自定义校验规则
+    { required: true, validator: validateNewPwd, trigger: 'blur' }
+  ],
+  confirmPassword: [
+    { required: true, validator: validateConfirmPwd, trigger: 'blur' }
+  ]
+}
+
+const openPwdDialog = () => {
+  pwdDialogVisible.value = true
+}
+
+const resetPwdForm = () => {
+  if (pwdFormRef.value) {
+    pwdFormRef.value.resetFields()
+  }
+}
+
+const handleUpdatePassword = async () => {
+  if (!pwdFormRef.value) return
+  await pwdFormRef.value.validate(async (valid) => {
+    if (valid) {
+      pwdSaving.value = true
+      try {
+        const res = await updatePassword({
+          oldPassword: pwdForm.oldPassword,
+          newPassword: pwdForm.newPassword
+        })
+        if (res.code === 1 || res.code === 200) {
+          ElMessage.success('密码修改成功，请使用新密码重新登录！')
+          pwdDialogVisible.value = false
+          localStorage.removeItem('token')
+          if (window.globalWs) window.globalWs.close()
+          router.replace('/login')
+        }
+      } finally {
+        pwdSaving.value = false
+      }
+    }
+  })
+}
+// ======== 🌟 密码修改相关逻辑结束 ========
 
 const getStatusText = (s) => ({ 0: '寻找中', 1: '锁定中', 2: '已结案', 3: '已下架' }[s] || '未知')
 const getStatusType = (s) => s === 1 ? 'warning' : (s === 2 ? 'info' : (s === 3 ? 'danger' : 'primary'))
@@ -128,13 +250,12 @@ const fetchData = async () => {
   } finally { loading.value = false }
 }
 
-// 🌟 核心逻辑更新：使用你新建的明确接口
 const fetchUserPosts = async () => {
   listLoading.value = true
   try {
     let res = (Number(route.params.id) === myUserId.value) 
-      ? await getMyPublishPage({ page: pageParams.value.page, pageSize: 10 }) // 看自己的
-      : await getOthersPublishPage(route.params.id, { page: pageParams.value.page, pageSize: 10 }) // 看别人的
+      ? await getMyPublishPage({ page: pageParams.value.page, pageSize: 10 }) 
+      : await getOthersPublishPage(route.params.id, { page: pageParams.value.page, pageSize: 10 }) 
       
     itemList.value = res.data.records || []
     total.value = res.data.total || 0
@@ -165,7 +286,7 @@ const openEditDialog = async () => {
 
 const handleAvatarUpload = async (options) => {
   const res = await uploadImage(options.file)
-  if (res.code === 1) {
+  if (res.code === 1 || res.code === 200) {
     editForm.avatarUrl = res.data
     ElMessage.success('上传成功')
   }
@@ -175,7 +296,7 @@ const handleUpdateUser = async () => {
   saving.value = true
   try {
     const res = await updateUserInfo(editForm)
-    if (res.code === 1) {
+    if (res.code === 1 || res.code === 200) {
       ElMessage.success('修改成功')
       editDialogVisible.value = false
       fetchData()
