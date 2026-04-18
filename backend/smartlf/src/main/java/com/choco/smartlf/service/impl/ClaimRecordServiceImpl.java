@@ -344,9 +344,9 @@ public class ClaimRecordServiceImpl extends ServiceImpl<ClaimRecordMapper, Claim
 
                 // 判断：只有查到了码，并且 ttl 大于 0（还没过期）
                 if (pickupCode != null && ttl > 0) {
-                    vo.setPickupCode(pickupCode);
                     // 🌟 核心转换：当前时间 + 剩余秒数 = 具体的过期时间点
                     vo.setCodeExpireTime(LocalDateTime.now().plusSeconds(ttl));
+                    vo.setPickupCode(pickupCode);
                 } else {
                     // 如果 Redis 里拿不到，说明这 3 天已经过去了，取件码已经自动销毁了
                     vo.setPickupCode(Constant.CAPTCHA_EXPIRED);

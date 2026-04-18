@@ -82,9 +82,7 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
     @Lazy
     private  ItemInfoService proxySelf;
 
-    @Autowired
-    @Qualifier("aiExecutor")
-    private Executor aiExecutor;
+    private final Executor aiExecutor;
 
     @Transactional(rollbackFor = Exception.class)
     @Override

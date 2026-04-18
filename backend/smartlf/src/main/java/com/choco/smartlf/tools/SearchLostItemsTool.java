@@ -27,7 +27,7 @@ record SearchItemRequest(
 public class SearchLostItemsTool  {
 
     public static final String TOOL_NAME = "searchLostItems";
-    // 🌟 这里只需注入 VectorStore 接口即可，因为检索操作不需要 save()，符合最小权限原则
+    // 🌟 这里只需注入 VectorStore 接口即可，因为检索操作不需要 save()
     @Autowired
     private VectorStore vectorStore;
 
