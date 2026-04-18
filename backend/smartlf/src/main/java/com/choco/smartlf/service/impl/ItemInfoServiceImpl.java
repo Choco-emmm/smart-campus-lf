@@ -195,14 +195,17 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
 
     @Override
     public void updateItem(ItemUpdateDTO dto) {
-        //更新三张表
         Long itemId = dto.getId();
         Long currentUserId = UserContext.getUserId();
 
-        // 1. 校验该物品是否存在，以及是否为当前用户发布的
+        //更新三张表
+        // 1. 校验该物品是否被封禁以及存在，以及是否为当前用户发布的
         ItemInfo oldItem = this.getById(itemId);
         if (oldItem == null) {
-            throw new BusinessException("该物品信息不存在");
+            throw new BusinessException("该帖子不存在");
+        }
+        if(ItemStatusEnum.BANNED.getCode().equals(oldItem.getStatus())){
+            throw new BusinessException("该帖子已被违规下架，无法操作");
         }
         if (!oldItem.getUserId().equals(currentUserId)) {
             //只有本人能修改信息，管理员都不行
@@ -287,12 +290,12 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
         if (!item.getUserId().equals(currentUserId)) {
             throw new BusinessException(ResultCodeEnum.FORBIDDEN, "你没有权限修改此帖子状态！");
         }
-        //如果状态为违规下架（3）状态，则不能修改
-        Integer status = dto.getStatus();
-        if (status.equals(ItemStatusEnum.BANNED.getCode())) {
+        //如果原状态为违规下架（3）状态，则不能修改
+        if (item.getStatus().equals(ItemStatusEnum.BANNED.getCode())) {
             throw new BusinessException("物品状态为违规下架，不能修改！");
         }
 
+        Integer status = dto.getStatus();
         // 2. 联动逻辑：如果状态改为“已结案(2)”，自动取消置顶
         // 这里的2 对应 ItemStatusEnum 中的定义
         if (status.equals(ItemStatusEnum.CLOSED.getCode())) {

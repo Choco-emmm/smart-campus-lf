@@ -122,15 +122,17 @@
             <div v-if="myUserId && String(myUserId) === String(detail.userId)" class="owner-actions">
               <div class="status-manage">
                 <p class="section-label">更改状态：</p>
-                <el-select v-model="detail.status" @change="handleStatusChange" style="width: 100%">
+                <el-select v-model="detail.status" @change="handleStatusChange" style="width: 100%" :disabled="detail.status === 3">
                   <el-option :value="0" label="寻找中" />
                   <el-option :value="1" label="锁定中" />
                   <el-option :value="2" label="已结案" />
+                  <el-option v-if="detail.status === 3" :value="3" label="已被违规下架" disabled />
                 </el-select>
               </div>
               <el-divider style="margin: 0;" />
-              <el-button type="primary" class="full-btn" @click="router.push(`/item/edit/${detail.id}`)">修改帖子</el-button>
-              <el-button v-if="myRole !== 1 && !detail.isTop" type="warning" class="full-btn" @click="handleTopApply">申请置顶</el-button>
+              <el-button type="primary" class="full-btn" :disabled="detail.status === 3" @click="router.push(`/item/edit/${detail.id}`)">修改帖子</el-button>
+              <el-button v-if="myRole !== 1 && !detail.isTop" type="warning" class="full-btn" :disabled="detail.status === 3" @click="handleTopApply">申请置顶</el-button>
+              
               <el-button v-if="myRole === 1" :type="detail.isTop ? 'info' : 'warning'" class="full-btn" @click="handleAdminToggleTop">
                 {{ detail.isTop ? '取消置顶' : '一键置顶' }}
               </el-button>
@@ -289,8 +291,12 @@ const submitComment = async () => {
 }
 
 const handleStatusChange = async (val) => {
-  await updateItemStatus({ id: detail.value.id, status: val })
-  ElMessage.success('状态已更新')
+  try {
+    await updateItemStatus({ id: detail.value.id, status: val })
+    ElMessage.success('状态已更新')
+  } catch (error) {
+    await fetchData()
+  }
 }
 
 const handleVerifySubmit = async () => {
@@ -327,7 +333,6 @@ const handleAdminToggleTop = async () => {
   }).catch(() => {})
 }
 
-// 🌟 修复：防止只有“其他原因”时多出分号和空格
 const confirmReport = async () => {
   if (selectedReasons.value.length === 0) return ElMessage.warning('请选择原因')
   
@@ -357,7 +362,6 @@ const handleDelete = () => {
       ElMessage.success('删除成功')
       router.replace('/')
     } catch (error) {
-      // 错误已由 request.js 全局处理
     }
   }).catch(() => {})
 }

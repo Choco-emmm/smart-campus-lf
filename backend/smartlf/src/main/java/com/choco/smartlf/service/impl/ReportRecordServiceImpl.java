@@ -127,8 +127,10 @@ public class ReportRecordServiceImpl extends ServiceImpl<ReportRecordMapper, Rep
 
                 itemInfoService.updateById(item);
                 //通知原帖主
-                User reporter = userService.getById(report.getReporterId());
-                ChatWebSocketServer.pushSystemNotice(reporter.getId(),String.format(WsNoticeConstant.ITEM_VERIFIED_DOWN, item.getPublicDesc()));
+                User target = userService.getById(item.getUserId());
+                if(target!=null){
+                    ChatWebSocketServer.pushSystemNotice(target.getId(),String.format(WsNoticeConstant.ITEM_VERIFIED_DOWN, item.getPublicDesc()));
+                }
 
                 log.info("举报核实联动：物品ID {} 已被违规下架", item.getId());
             }
