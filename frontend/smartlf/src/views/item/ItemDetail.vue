@@ -56,7 +56,7 @@
             </div>
           </div>
 
-          <div v-if="myRole === 1" class="admin-secure-container">
+          <div v-if="myRole === 1 && (detail.checkQuestion || detail.checkAnswer || detail.contactInfo)" class="admin-secure-container">
             <div class="secure-title">
               <el-icon><Lock /></el-icon> 管理员专属：底表核验数据展示
             </div>
@@ -312,7 +312,6 @@ const confirmReport = async () => {
   reportDialogVisible.value = false
 }
 
-// 🌟 修复后的删除逻辑：增加 ElMessage 提醒
 const handleDelete = () => {
   ElMessageBox.confirm('确定删除此帖吗？删除后将无法找回。', '提示', {
     confirmButtonText: '确定删除',

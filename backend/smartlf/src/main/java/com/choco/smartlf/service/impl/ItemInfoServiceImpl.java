@@ -5,6 +5,7 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -214,15 +215,16 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
         this.updateById(itemInfo);
 
         // 3. 更新详情表
-        ItemDetail itemDetail = new ItemDetail();
-        itemDetail.setItemId(itemId);
-        itemDetail.setSemiPublicDesc(dto.getSemiPublicDesc());
-        if (CollUtil.isNotEmpty(dto.getImagesUrlList())) {
-            itemDetail.setImagesUrl(JSONUtil.toJsonStr(dto.getImagesUrlList()));
-        } else {
-            itemDetail.setImagesUrl(null); // 如果前端传空，说明删除了所有图片
-        }
-        itemDetailService.updateById(itemDetail);
+        boolean hasImages = CollUtil.isNotEmpty(dto.getImagesUrlList());
+
+        itemDetailService.update(new LambdaUpdateWrapper<ItemDetail>()
+                // 匹配条件
+                .eq(ItemDetail::getItemId, itemId)
+                // 显式设置值，哪怕 dto.getSemiPublicDesc() 是空串也能更新进去
+                .set(ItemDetail::getSemiPublicDesc, dto.getSemiPublicDesc())
+                // 根据是否有图片设置对应的值或 null
+                .set(ItemDetail::getImagesUrl, hasImages ? JSONUtil.toJsonStr(dto.getImagesUrlList()) : null)
+        );
 
         // 4. 更新核验表
         // 先看用户是不是想关闭核验模式（把暗号和联系方式都置空）
@@ -701,6 +703,7 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
                 log.error("【异步线程】AI 多模态任务执行发生系统异常，物品ID: {}", itemInfo.getId(), e);
                 // 也可以顺便通知一下前端
                 ChatWebSocketServer.pushSystemNotice(userId,  String.format(Constant.AI_SYSTEM_ERROR_NOTICE, itemInfo.getPublicDesc()));
+                throw e;
 
             } finally {
                 // 无论如何，帖子都必须进向量库（实现你完美的降级策略）
@@ -759,6 +762,7 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
 
         // 4. 解析结果
         String cleanJson = aiResponseStr.replace("```json", "").replace("```", "").trim();
+        log.info("【多模态结果】{}", cleanJson);
 // 2. 🌟 核心破局：使用 Spring 原生 Jackson 直接反序列化为 Record！
         AIExtractResultDTO aiResult = null;
         try {
@@ -767,7 +771,7 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
             aiResult = objectMapper.readValue(cleanJson, AIExtractResultDTO.class);
         } catch (Exception e) {
             log.error("【Jackson 解析失败】无法将 JSON 转为 Record！原文: {}", cleanJson, e);
-            return null;
+            throw new RuntimeException("Jackson 解析失败！");
         }
 
             // 5. 更新数据库 (修复了你之前漏掉右括号的 Bug，并使用了 record 的读取方式)

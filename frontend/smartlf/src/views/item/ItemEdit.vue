@@ -152,7 +152,7 @@ onMounted(async () => {
   if (res.code === 1 || res.code === 200) {
     Object.assign(form, res.data)
     
-    // 🌟 核心修复1：如果后端传回的 imagesUrlList 是 null，强制给它一个空数组，防止后面 push 报错
+    // 如果后端传回的 imagesUrlList 是 null，强制给它一个空数组，防止后面 push 报错
     form.imagesUrlList = res.data.imagesUrlList || []
     
     // 解决图片回显和删除问题
@@ -162,14 +162,14 @@ onMounted(async () => {
       response: { data: url } 
     }))
 
-    // 你辛辛苦苦写的逻辑，原封不动保留！
     const parsedLoc = parseLocationEcho(res.data.location)
     selectedLocationPath.value = parsedLoc.path
     locationDetail.value = parsedLoc.detail
     
-    form.verifyQuestion = res.data.checkQuestion || ''
-    form.verifyAnswer = res.data.checkAnswer || ''
-    form.privateContact = res.data.contactInfo || ''
+    // 🌟 核心修复处：把读取的字段名改成与 JSON 一致的字段
+    form.verifyQuestion = res.data.verifyQuestion || ''
+    form.verifyAnswer = res.data.verifyAnswer || ''
+    form.privateContact = res.data.privateContact || ''
   }
   pageLoading.value = false
 })
@@ -177,7 +177,6 @@ onMounted(async () => {
 const handleUpload = async (options) => {
   const res = await uploadImage(options.file)
   if (res.code === 1 || res.code === 200) {
-    // 🌟 核心修复2：双重保险，如果由于某些原因不是数组，初始化为数组
     if (!form.imagesUrlList) {
       form.imagesUrlList = []
     }
@@ -188,7 +187,6 @@ const handleUpload = async (options) => {
 
 const handleRemove = (file) => {
   const url = file.url || file.response?.data
-  // 移除图片时也加个保护
   if (form.imagesUrlList) {
     form.imagesUrlList = form.imagesUrlList.filter(u => u !== url)
   }
@@ -208,6 +206,7 @@ const onSubmit = async () => {
     return ElMessage.warning('请填写标题、物品名称及发生地点')
   }
 
+  // 🌟 完善校验：只要填了任意一个隐私字段，就必须把核验问题和答案填完
   if ((form.verifyQuestion || form.verifyAnswer || form.privateContact) && 
       !(form.verifyQuestion && form.verifyAnswer)) {
       return ElMessage.warning('设置隐私保护时，【核验问题】和【核验答案】不可为空！')
