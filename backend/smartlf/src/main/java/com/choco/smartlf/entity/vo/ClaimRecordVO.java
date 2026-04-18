@@ -11,7 +11,7 @@ public class ClaimRecordVO {
     @Schema(description="帖子ID")
     private Long itemId;
     @Schema(description="帖子名称")
-    private String itemName;
+    private String title;
     @Schema(description="申请者ID")
     private Long applicantId;
     @Schema(description="帖子发布者ID")

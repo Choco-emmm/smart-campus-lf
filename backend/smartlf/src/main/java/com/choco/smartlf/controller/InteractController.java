@@ -2,6 +2,7 @@ package com.choco.smartlf.controller;
 
 import com.choco.smartlf.entity.Result;
 import com.choco.smartlf.entity.dto.*;
+import com.choco.smartlf.entity.pojo.ItemSecure;
 import com.choco.smartlf.entity.pojo.PrivateMessage;
 import com.choco.smartlf.entity.vo.ChatSessionVO;
 import com.choco.smartlf.entity.vo.ClaimRecordVO;
@@ -9,6 +10,7 @@ import com.choco.smartlf.entity.vo.ItemCommentNotificationVO;
 import com.choco.smartlf.entity.vo.ItemCommentVO;
 import com.choco.smartlf.service.ClaimRecordService;
 import com.choco.smartlf.service.ItemCommentService;
+import com.choco.smartlf.service.ItemSecureService;
 import com.choco.smartlf.service.PrivateMessageService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -24,6 +26,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class InteractController {
 
+    private final ItemSecureService itemSecureService;
     private final ItemCommentService itemCommentService;
     private final PrivateMessageService privateMessageService;
     private final ClaimRecordService claimRecordService;
@@ -71,6 +74,16 @@ public class InteractController {
         return Result.success(unreadCount);
     }
     // ================= 认领申请功能 =================
+    @Operation(summary = "获取物品的认领核验问题")
+    @GetMapping("/secure/question/{itemId}")
+    public Result<String> getSecureQuestion(@PathVariable Long itemId) {
+        ItemSecure secure = itemSecureService.getById(itemId);
+        // 如果有底表数据且设置了问题，才返回问题
+        if (secure != null && secure.getVerifyQuestion() != null ) {
+            return Result.success(secure.getVerifyQuestion());
+        }
+        return Result.success(null);
+    }
     @Operation(summary = "提交认领申请")
     @PostMapping("/claim/submit")
     public Result<Void> submitClaim(@Validated @RequestBody ClaimSubmitDTO dto) {

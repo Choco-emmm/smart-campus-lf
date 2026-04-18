@@ -319,7 +319,7 @@ public class ClaimRecordServiceImpl extends ServiceImpl<ClaimRecordMapper, Claim
             // 1. 填充物品名称
             ItemInfo item = itemInfoService.getById(record.getItemId());
             if (item != null) {
-                vo.setItemName(item.getItemName());
+                vo.setTitle(item.getPublicDesc());
             }
 
             // 2. 动态填充“对方”的信息（头像和昵称）

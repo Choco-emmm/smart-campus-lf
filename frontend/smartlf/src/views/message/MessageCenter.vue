@@ -318,8 +318,13 @@ const reportActiveWindow = (targetId) => {
 const handleMenuSelect = (index) => {
   activeTab.value = index
   if (index === 'chat') {
-    fetchSessions()
-    if (currentTargetId.value) reportActiveWindow(currentTargetId.value)
+    if (currentTargetId.value) {
+      const session = sessionList.value.find(s => s.targetUserId === currentTargetId.value)
+      if (session) selectSession(session)
+      else fetchSessions()
+    } else {
+      fetchSessions()
+    }
   } else if (index === 'notice') {
     fetchNotices()
     reportActiveWindow(null)
@@ -449,7 +454,6 @@ const sendAiMsg = async () => {
       headers: { 'token': token, 'Accept': 'text/event-stream' }
     })
 
-    // 🌟 处理 HTTP 状态码限流
     if (response.status === 429) {
       aiMsgObj.loading = false
       aiMsgObj.content = '⚠️ **限额提示**\n\n今日 AI 对话次数已达上限，为了保障所有同学的体验，单日请求次数有限制。请明天再来找我聊天吧！'
@@ -457,7 +461,6 @@ const sendAiMsg = async () => {
       return
     }
 
-    // 🌟 处理业务 Code 限流 (以 JSON 形式返回的情况)
     const contentType = response.headers.get('content-type') || ''
     if (contentType.includes('application/json')) {
       const resJson = await response.json()
@@ -591,10 +594,12 @@ const formatTime = (t) => t ? t.replace('T', ' ').substring(0, 16) : ''
 
 const handleIncomingChat = (e) => {
   const newMsg = e.detail
-  if (currentTargetId.value === newMsg.senderId) {
+  // 🌟 修复一：加上 activeTab === 'chat' 判断
+  if (activeTab.value === 'chat' && currentTargetId.value === newMsg.senderId) {
     chatHistory.value.push(newMsg)
     scrollToBottom()
   } else {
+    // 否则一律加红点
     let session = sessionList.value.find(s => s.targetUserId === newMsg.senderId)
     if (session) {
       session.unreadCount += 1
@@ -650,14 +655,14 @@ onUnmounted(() => {
 .session-header { display: flex; align-items: center; height: 100%; }
 .nickname { font-weight: 500; color: #1d2129; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 15px; }
 
-/* 🌟 主内容区与聊天窗口美化 */
+/* 主内容区与聊天窗口美化 */
 .main-content { flex: 1; background: #fff; overflow: hidden; display: flex; flex-direction: column; }
 .empty-chat { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #909399; }
 .chat-window, .claim-window { height: 100%; display: flex; flex-direction: column; }
 .chat-header { padding: 15px 20px; font-size: 16px; font-weight: bold; border-bottom: 1px solid #ebeef5; background: #fff; z-index: 10; }
 .chat-history { flex: 1; padding: 20px; overflow-y: auto; background-color: #f7f8fa; scroll-behavior: smooth; }
 
-/* 🌟 聊天输入框区域美化 */
+/* 聊天输入框区域美化 */
 .chat-input-area { 
   padding: 15px 20px; 
   background: #fff; 
@@ -682,7 +687,7 @@ onUnmounted(() => {
   gap: 10px;
 }
 
-/* 🌟 通用聊天气泡美化 */
+/* 通用聊天气泡美化 */
 .message-bubble-wrapper { display: flex; margin-bottom: 24px; align-items: flex-start; }
 .msg-right { justify-content: flex-end; }
 .bubble-content {
@@ -695,7 +700,7 @@ onUnmounted(() => {
 .msg-left .bubble-content { align-items: flex-start; }
 .chat-avatar { flex-shrink: 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
 
-/* 🌟 气泡本体美化 */
+/* 气泡本体美化 */
 .bubble { 
   padding: 12px 16px; 
   border-radius: 12px; 
@@ -708,7 +713,7 @@ onUnmounted(() => {
   background: #fff; 
   color: #1d2129; 
   border: 1px solid #ebeef5; 
-  border-top-left-radius: 2px; /* 聊天气泡的小尖角效果 */
+  border-top-left-radius: 2px; 
 }
 .bubble-me { 
   background: #409eff; 
@@ -739,9 +744,7 @@ onUnmounted(() => {
 .code { color: #f56c6c; font-size: 18px; margin-left: 5px; letter-spacing: 1px; }
 .claim-item-footer { text-align: right; }
 
-/* ==================================== */
-/* 🌟 AI Markdown 专属精美排版样式 */
-/* ==================================== */
+/* AI Markdown 专属精美排版样式 */
 .ai-markdown-bubble {
   line-height: 1.6;
   white-space: normal !important; 

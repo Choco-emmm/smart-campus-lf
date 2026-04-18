@@ -90,3 +90,11 @@ export function verifyItemSecure(itemId, answer) {
         params: { answer }
     })
 }
+
+// 获取认领核验问题
+export function getItemSecureQuestion(itemId) {
+    return request({
+        url: `/interact/secure/question/${itemId}`,
+        method: 'get'
+    })
+}

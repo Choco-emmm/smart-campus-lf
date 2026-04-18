@@ -138,6 +138,10 @@
             </div>
             
             <div v-else-if="myRole === 1" class="admin-actions">
+              <el-button v-if="detail.hasSecureCheck && detail.status === 0" type="success" class="full-btn" @click="openVerifyDialog">
+                 <el-icon><Stamp /></el-icon> 提交认领申请
+              </el-button>
+
               <el-button v-if="detail.status !== 3" :type="detail.isTop ? 'info' : 'warning'" class="full-btn" @click="handleAdminToggleTop">
                 {{ detail.isTop ? '取消置顶' : '一键置顶' }}
               </el-button>
@@ -150,7 +154,7 @@
             </div>
 
            <div v-else class="normal-actions">
-              <el-button v-if="detail.hasSecureCheck && detail.status === 0" type="success" class="full-btn" @click="verifyDialogVisible = true">
+              <el-button v-if="detail.hasSecureCheck && detail.status === 0" type="success" class="full-btn" @click="openVerifyDialog">
                  <el-icon><Stamp /></el-icon> 提交认领申请
               </el-button>
 
@@ -177,8 +181,8 @@
     </el-dialog>
 
     <el-dialog v-model="verifyDialogVisible" title="提交认领申请" width="400px" destroy-on-close>
-      <div style="margin-bottom: 15px; font-weight: bold; color: #1d2129;">
-        核验问题：{{ detail.verifyQuestion || '失主未设置问题，请输入暗号或补充描述' }}
+      <div style="margin-bottom: 15px; font-weight: bold; color: #1d2129;" v-loading="verifyQuestionLoading">
+        核验问题：{{ verifyQuestionText || '失主未设置问题，请输入暗号或补充描述' }}
       </div>
       <el-input v-model="verifyAnswer" placeholder="请输入你的答案 / 物品细节特征" clearable @keyup.enter="handleVerifySubmit" />
       <template #footer>
@@ -186,6 +190,7 @@
         <el-button type="primary" @click="handleVerifySubmit" :loading="verifying">提交申请</el-button>
       </template>
     </el-dialog>
+
   </div>
 </template>
 
@@ -194,7 +199,7 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { PriceTag, Location, Warning, Top, Remove, MagicStick, Lock, Unlock, Loading, Clock, Stamp, Key } from '@element-plus/icons-vue' 
-import { getItemDetail, deleteItem, reportItem, updateItemStatus, applyItemTop } from '@/api/item'
+import { getItemDetail, deleteItem, reportItem, updateItemStatus, applyItemTop, getItemSecureQuestion } from '@/api/item'
 import { getCommentList, addComment, submitClaim } from '@/api/interact' 
 import { getUserInfo } from '@/api/user'
 import { banItem, toggleTopByAdmin, getItemDetailByAdmin } from '@/api/admin'
@@ -216,6 +221,23 @@ const otherReasonText = ref('')
 const verifyDialogVisible = ref(false)
 const verifyAnswer = ref('')
 const verifying = ref(false)
+
+const verifyQuestionText = ref('')
+const verifyQuestionLoading = ref(false)
+
+const openVerifyDialog = async () => {
+  verifyDialogVisible.value = true
+  verifyQuestionLoading.value = true
+  verifyQuestionText.value = '' 
+  try {
+    const res = await getItemSecureQuestion(detail.value.id)
+    verifyQuestionText.value = res.data || ''
+  } catch (error) {
+    console.error('获取核验问题失败', error)
+  } finally {
+    verifyQuestionLoading.value = false
+  }
+}
 
 const parsedAiDesc = computed(() => {
   if (!detail.value || !detail.value.aiGeneratedDesc || detail.value.isContentHidden) return ''
@@ -275,7 +297,11 @@ const handleVerifySubmit = async () => {
   if (!verifyAnswer.value.trim()) return ElMessage.warning('请输入答案')
   verifying.value = true
   try {
-    await submitClaim({ itemId: detail.value.id, answer: verifyAnswer.value.trim() })
+    // 🌟 修复处：将字段名改为后端的 claimAnswer
+    await submitClaim({ 
+      itemId: detail.value.id, 
+      claimAnswer: verifyAnswer.value.trim() 
+    })
     verifyDialogVisible.value = false
     ElMessage.success('认领申请已成功提交，请前往【消息中心】留意帖主审核进度！')
   } finally {

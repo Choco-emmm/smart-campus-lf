@@ -38,7 +38,7 @@ public class PrivateMessageServiceImpl extends ServiceImpl<PrivateMessageMapper,
     private final UserService userService;
     // 🌟 HTTP 接口调用的方法
     @Override
-    public PrivateMessage sendMessage(MessageSendDTO dto, Long senderId, boolean isReceiverOnline,boolean isReceiverChatting) {
+    public PrivateMessage sendMessage(MessageSendDTO dto, Long senderId, boolean isReceiverOnline,boolean isReceiverFocusingMe) {
         if (senderId == null) {
             throw new RuntimeException("发送人ID不能为空");
         }
@@ -65,8 +65,8 @@ public class PrivateMessageServiceImpl extends ServiceImpl<PrivateMessageMapper,
         save(privateMessage);
         log.info("发送私信成功，落库状态(1已读/0未读): {}", privateMessage.getIsRead());
 
-        if(!isReceiverChatting){
-            //对方不在看聊天窗口就发个通知给他
+        if(!isReceiverFocusingMe){
+            //对方不在跟我聊天就发个通知给他
             ChatWebSocketServer.pushSystemNotice(dto.getReceiverId(),String.format(WsNoticeConstant.NEW_PRIVATE_MESSAGE,senderInfo.getNickname()));
         }
 

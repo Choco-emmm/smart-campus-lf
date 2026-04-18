@@ -115,10 +115,7 @@ public class ChatWebSocketServer {
                 }
 
                 Long receiverFocusId = ACTIVE_WINDOWS.get(messageDTO.getReceiverId());
-                /**
-                 * 对方正在聊天
-                 */
-                boolean isReceiverChatting= receiverFocusId != null;
+
                 /**
                  * 对方正在查看跟我的聊天窗口
                  */
@@ -126,8 +123,8 @@ public class ChatWebSocketServer {
 
                 //将我发的消息先存入库
                 //如果对方没focus我，默认未读。若对方focus我，我发给对方消息都设为已读
-                //对方没在聊天，全局通知一下
-                PrivateMessage savedMessage = privateMessageService.sendMessage(messageDTO, this.currentUserId, isReceiverFocusingMe,isReceiverChatting);
+                //对方没在跟我聊天，全局通知一下
+                PrivateMessage savedMessage = privateMessageService.sendMessage(messageDTO, this.currentUserId, isReceiverFocusingMe,isReceiverFocusingMe);
 
                 //对方在线，传输给对方
                 if (isOnline(messageDTO.getReceiverId())) {
