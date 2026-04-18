@@ -116,7 +116,7 @@
                   <el-empty v-if="receivedClaims.length === 0" description="暂无收到认领申请" />
                   <el-card v-for="claim in receivedClaims" :key="claim.id" class="claim-card" shadow="hover">
                     <div class="claim-item-header">
-                      <span class="claim-title">申请帖子：<span class="highlight" @click="router.push(`/item/${claim.itemId}`)">{{ claim.itemName }}</span></span>
+                      <span class="claim-title">申请帖子：<span class="highlight" @click="router.push(`/item/${claim.itemId}`)">{{ claim.title }}</span></span>
                       <el-tag :type="getClaimStatusType(claim.status)">{{ getClaimStatusText(claim.status) }}</el-tag>
                     </div>
                     <div class="claim-item-body">
@@ -164,7 +164,7 @@
                   <el-empty v-if="sentClaims.length === 0" description="暂无发出认领申请" />
                   <el-card v-for="claim in sentClaims" :key="claim.id" class="claim-card" shadow="hover">
                     <div class="claim-item-header">
-                      <span class="claim-title">目标帖子：<span class="highlight" @click="router.push(`/item/${claim.itemId}`)">{{ claim.itemName }}</span></span>
+                      <span class="claim-title">目标帖子：<span class="highlight" @click="router.push(`/item/${claim.itemId}`)">{{ claim.title }}</span></span>
                       <el-tag :type="getClaimStatusType(claim.status)">{{ getClaimStatusText(claim.status) }}</el-tag>
                     </div>
                     <div class="claim-item-body">

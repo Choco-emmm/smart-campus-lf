@@ -297,7 +297,6 @@ const handleVerifySubmit = async () => {
   if (!verifyAnswer.value.trim()) return ElMessage.warning('请输入答案')
   verifying.value = true
   try {
-    // 🌟 修复处：将字段名改为后端的 claimAnswer
     await submitClaim({ 
       itemId: detail.value.id, 
       claimAnswer: verifyAnswer.value.trim() 
@@ -328,10 +327,19 @@ const handleAdminToggleTop = async () => {
   }).catch(() => {})
 }
 
+// 🌟 修复：防止只有“其他原因”时多出分号和空格
 const confirmReport = async () => {
   if (selectedReasons.value.length === 0) return ElMessage.warning('请选择原因')
+  
   let reason = selectedReasons.value.filter(r => r !== '其他原因').join('; ')
-  if (selectedReasons.value.includes('其他原因')) reason += `; 其他: ${otherReasonText.value}`
+  
+  if (selectedReasons.value.includes('其他原因')) {
+    if (reason) {
+      reason += `; 其他: ${otherReasonText.value}`
+    } else {
+      reason = `其他: ${otherReasonText.value}`
+    }
+  }
   
   await reportItem({ itemId: Number(route.params.id), reason: reason })
   ElMessage.success('举报成功')

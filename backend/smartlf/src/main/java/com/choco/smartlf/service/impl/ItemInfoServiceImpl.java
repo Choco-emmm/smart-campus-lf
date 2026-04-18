@@ -287,10 +287,15 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
         if (!item.getUserId().equals(currentUserId)) {
             throw new BusinessException(ResultCodeEnum.FORBIDDEN, "你没有权限修改此帖子状态！");
         }
+        //如果状态为违规下架（3）状态，则不能修改
+        Integer status = dto.getStatus();
+        if (status.equals(ItemStatusEnum.BANNED.getCode())) {
+            throw new BusinessException("物品状态为违规下架，不能修改！");
+        }
 
         // 2. 联动逻辑：如果状态改为“已结案(2)”，自动取消置顶
         // 这里的2 对应 ItemStatusEnum 中的定义
-        if (dto.getStatus().equals(ItemStatusEnum.CLOSED.getCode())) {
+        if (status.equals(ItemStatusEnum.CLOSED.getCode())) {
 
             // 只有当它目前是置顶状态时才需要修改，减少不必要的数据库写操作
             if (item.getIsTop().equals(TopEnum.YES.getCode())) {
@@ -301,7 +306,7 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
         }
 
         // 3. 执行状态更新
-        item.setStatus(dto.getStatus());
+        item.setStatus(status);
         this.updateById(item);
     }
 
