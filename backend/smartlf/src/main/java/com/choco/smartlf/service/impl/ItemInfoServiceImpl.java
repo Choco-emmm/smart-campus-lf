@@ -800,7 +800,7 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
             log.info("【异步线程】多模态融合落库成功！物品ID: {}", itemId);
 
             // 6. WebSocket 通知用户
-            String noticeMsg = String.format(WsNoticeConstant.AI_POLISH_FINISH, safeName);
+            String noticeMsg = String.format(WsNoticeConstant.AI_POLISH_FINISH, safeTitle);
             ChatWebSocketServer.pushSystemNotice(userId, noticeMsg);
 
         // 🌟 7. 返回 DTO 给外层的 finally 块使用
