@@ -460,6 +460,8 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
         log.info("物品ID {} 已被封禁", item.getId());
         //删除向量数据
         this.deleteFromVector(itemId);
+        //通知用户
+        ChatWebSocketServer.pushSystemNotice(item.getUserId(),String.format(WsNoticeConstant.ITEM_VERIFIED_DOWN,item.getPublicDesc()));
     }
 
     @Override

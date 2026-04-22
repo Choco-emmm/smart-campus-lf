@@ -156,7 +156,7 @@ public class ItemCommentServiceImpl extends ServiceImpl<ItemCommentMapper, ItemC
             // 查一下帖子的标题
             ItemInfo item = itemInfoService.getById(itemId);
             if (item != null) {
-                vo.setItemTitle(item.getItemName());
+                vo.setItemTitle(item.getPublicDesc());
             } else {
                 vo.setItemTitle("已删除的帖子");
             }
