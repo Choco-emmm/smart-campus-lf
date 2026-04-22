@@ -21,6 +21,8 @@ import com.choco.smartlf.service.TopApplyRecordService;
 import com.choco.smartlf.mapper.TopApplyRecordMapper;
 import com.choco.smartlf.utils.Constant;
 import com.choco.smartlf.utils.UserContext;
+import com.choco.smartlf.utils.WsNoticeConstant;
+import com.choco.smartlf.websocket.ChatWebSocketServer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -114,13 +116,14 @@ public class TopApplyRecordServiceImpl extends ServiceImpl<TopApplyRecordMapper,
             throw new BusinessException("该申请已被处理，请勿重复操作");
         }
 
+        ItemInfo item = itemInfoService.getById(record.getItemId());
+
         // 3. 根据动作执行
         if (dto.getAction().equals(AdminAuditActionEnum.PASS.getCode())) {
             // ======== 动作 1：同意置顶 ========
             record.setStatus(TopApplyStatusEnum.APPROVED.getCode());
 
             // 联动修改物品主表的置顶状态
-            ItemInfo item = itemInfoService.getById(record.getItemId());
             if (item != null) {
                 item.setIsTop(TopEnum.YES.getCode());
                 // 设定过期时间：这里默认给它置顶 24小时
@@ -145,6 +148,14 @@ public class TopApplyRecordServiceImpl extends ServiceImpl<TopApplyRecordMapper,
 
         // 5. 更新申请表状态
         this.updateById(record);
+
+        // 6. 通知申请人审核结果（在线用户会即时收到系统通知）
+        String itemTitle = (item != null && StrUtil.isNotBlank(item.getPublicDesc())) ? item.getPublicDesc() : "该帖子";
+        String noticeContent = dto.getAction().equals(AdminAuditActionEnum.PASS.getCode())
+            ? String.format(WsNoticeConstant.TOP_APPLY_APPROVED, itemTitle)
+            : String.format(WsNoticeConstant.TOP_APPLY_REJECTED, itemTitle);
+        ChatWebSocketServer.pushSystemNotice(record.getUserId(), noticeContent);
+
         log.info("管理员处理置顶申请成功，申请ID: {}, 处理动作: {}", dto.getApplyId(), dto.getAction());
     }
 }

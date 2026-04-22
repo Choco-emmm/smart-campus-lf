@@ -592,8 +592,26 @@ const promptSupplement = (id) => {
 
 const formatTime = (t) => t ? t.replace('T', ' ').substring(0, 16) : ''
 
+const ensureChatCreateTime = (msg) => {
+  if (msg?.createTime) return msg
+
+  const candidate = msg?.sendTime ?? msg?.time ?? msg?.timestamp
+  let createTime = new Date().toISOString()
+
+  if (candidate) {
+    if (typeof candidate === 'number') {
+      createTime = new Date(candidate).toISOString()
+    } else {
+      const parsed = new Date(candidate)
+      createTime = Number.isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString()
+    }
+  }
+
+  return { ...msg, createTime }
+}
+
 const handleIncomingChat = (e) => {
-  const newMsg = e.detail
+  const newMsg = ensureChatCreateTime(e.detail)
   // 🌟 修复一：加上 activeTab === 'chat' 判断
   if (activeTab.value === 'chat' && currentTargetId.value === newMsg.senderId) {
     chatHistory.value.push(newMsg)

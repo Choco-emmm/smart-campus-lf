@@ -366,9 +366,21 @@ const handleDelete = () => {
   }).catch(() => {})
 }
 
-const handleTopApply = async () => {
-    await applyItemTop({ itemId: detail.value.id })
+const handleTopApply = () => {
+  ElMessageBox.prompt('请输入申请置顶的理由：', '申请置顶', {
+    confirmButtonText: '提交申请',
+    cancelButtonText: '取消',
+    inputPattern: /.+/,
+    inputErrorMessage: '申请理由不能为空'
+  }).then(async ({ value }) => {
+    const applyReason = value.trim()
+    await applyItemTop({
+      itemId: detail.value.id,
+      reason: applyReason,
+      applyReason
+    })
     ElMessage.success('申请已提交，请等待审核')
+  }).catch(() => {})
 }
 
 const goToProfile = (id) => router.push(`/profile/${id}`)

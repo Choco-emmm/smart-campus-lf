@@ -46,11 +46,26 @@ public class WsNoticeConstant {
     public static final String ITEM_VERIFIED_DOWN = "⚠️ 帖子下架提醒：您的帖子【%s】已被管理员核实为违规，已下架。";
 
 
+    // ================= 置顶申请通知 =================
+
+    /**
+     * 置顶申请审核通过
+     * 参数 1: 帖子名称
+     */
+    public static final String TOP_APPLY_APPROVED = "📌 置顶申请结果：您对【%s】的置顶申请已审核通过，帖子已进入置顶展示。";
+
+    /**
+     * 置顶申请审核拒绝
+     * 参数 1: 帖子名称
+     */
+    public static final String TOP_APPLY_REJECTED = "📌 置顶申请结果：您对【%s】的置顶申请未通过审核。";
+
+
     // ================= AI 辅助通知 (昨天加的) =================
     
     /**
      * AI 处理完成
-     * 参数 1: 物品名称
+     * 参数 1: 帖子名称
      */
     public static final String AI_POLISH_FINISH = "✨ 智能助手：AI 已为您的帖子【%s】补全了类型和详细描述！";
 

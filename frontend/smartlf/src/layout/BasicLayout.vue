@@ -115,6 +115,25 @@ const fetchInitialUnread = async () => {
   }
 }
 
+const normalizeChatCreateTime = (msg, raw) => {
+  if (msg?.createTime) return msg.createTime
+
+  const candidate =
+    msg?.sendTime ??
+    msg?.time ??
+    msg?.timestamp ??
+    raw?.createTime ??
+    raw?.sendTime ??
+    raw?.time ??
+    raw?.timestamp
+
+  if (!candidate) return new Date().toISOString()
+  if (typeof candidate === 'number') return new Date(candidate).toISOString()
+
+  const parsed = new Date(candidate)
+  return Number.isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString()
+}
+
 const initGlobalWebSocket = () => {
   const token = localStorage.getItem('token')
   console.log('🔍 [WS排查 1] 当前的 Token 是:', token)
@@ -156,6 +175,7 @@ const initGlobalWebSocket = () => {
     
     if (msgType === 'chat') {
       const msgData = res.data || res
+      msgData.createTime = normalizeChatCreateTime(msgData, res)
       if (window.activeChatId !== msgData.senderId) {
         msgUnreadCount.value++
       }
