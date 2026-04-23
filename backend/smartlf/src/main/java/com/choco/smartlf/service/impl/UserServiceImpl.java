@@ -389,7 +389,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             throw new BusinessException("该用户不存在或已注销");
         }
 
-        // 3. 数据转换（这里只会把 User 和 UserProfileVO 中名字相同的字段拷过去，完美过滤掉了密码、手机号等敏感字段）
+        // 3. 数据转换：只拷贝同名字段，避免返回密码、手机号等敏感信息
         UserProfileVO vo = new UserProfileVO();
         BeanUtil.copyProperties(user, vo);
 

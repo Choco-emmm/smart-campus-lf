@@ -88,7 +88,7 @@ public class ClaimRecordServiceImpl extends ServiceImpl<ClaimRecordMapper, Claim
 
 
 
-        // 4. 防刷校验：检查该用户是否已经对这个物品发起过申请（且状态不是“已拒绝”）
+        // 5. 防刷校验：检查该用户是否已经对这个物品发起过申请（且状态不是“已拒绝”）
         // 也就是说，如果正在审核中（0），或者要求补充（3），或者已经补充（4），都不允许再发起新的申请
         long existCount = this.count(new LambdaQueryWrapper<ClaimRecord>()
                 .eq(ClaimRecord::getItemId, dto.getItemId())
@@ -102,21 +102,21 @@ public class ClaimRecordServiceImpl extends ServiceImpl<ClaimRecordMapper, Claim
             throw new BusinessException("您已有处理中的申请，请勿重复提交");
         }
 
-        // 5. 拼装认领记录实体
+        // 6. 拼装认领记录实体
         ClaimRecord record = new ClaimRecord();
         record.setItemId(dto.getItemId());
         record.setApplicantId(currentUserId);     // 申请人是当前登录用户
         record.setPublisherId(iteminfo.getUserId());  // 帖子的主人是谁
         record.setAnswer(dto.getClaimAnswer());
 
-        // 🌟 优雅使用枚举类：状态设置为 0 (待审核)
+        // 状态设置为待审核
         record.setStatus(ClaimStatusEnum.PENDING.getCode());
 
         // 保存入库
         this.save(record);
         log.info("用户 {} 提交认领申请成功，申请单ID：{}", currentUserId, record.getId());
 
-        // 6. 通知发帖人“有人来认领了”
+        // 7. 通知发帖人“有人来认领了”
         // 这里的 item.getUserId() 就是发帖人的 ID
         ChatWebSocketServer.pushSystemNotice(iteminfo.getUserId(),
                 String.format(WsNoticeConstant.NEW_CLAIM_APPLY, iteminfo.getPublicDesc()));
@@ -156,7 +156,7 @@ public class ClaimRecordServiceImpl extends ServiceImpl<ClaimRecordMapper, Claim
 
         // 5. 更新补充内容并流转状态
         record.setSupplementAnswer(dto.getSupplementAnswer());
-        // 🌟 状态变更为 4：已补充细节，等待发布者二次审核
+        // 状态变更为已补充，等待发布者二次审核
         record.setStatus(ClaimStatusEnum.SUPPLEMENT_SUBMITTED.getCode());
 
         this.updateById(record);
@@ -206,14 +206,14 @@ public class ClaimRecordServiceImpl extends ServiceImpl<ClaimRecordMapper, Claim
             stringRedisTemplate.opsForValue().set(key, code);
             // ② 设置暗号有效期为 3 天
             stringRedisTemplate.expire(key, Constant.CAPTCHA_EXPIRATION, TimeUnit.DAYS);
-            // ③ 终极联动：修改原帖的状态，不让别人再申请了！
+            // ③ 联动修改原帖状态，避免重复申请
             ItemInfo item = itemInfoService.getById(record.getItemId());
             if (item != null && ItemStatusEnum.SEARCHING.getCode().equals(item.getStatus())) {
                 item.setStatus(ItemStatusEnum.LOCKED.getCode());
                 itemInfoService.updateById(item);
             }
             //查询其他同一个帖子并且处在可审核状态的其他申请，全部置为拒绝
-            List<ClaimRecord> claimRecords = this.list(new LambdaQueryWrapper<ClaimRecord>() // 🌟 这里换成 LambdaQueryWrapper
+            List<ClaimRecord> claimRecords = this.list(new LambdaQueryWrapper<ClaimRecord>() // 使用 LambdaQueryWrapper 构造条件
                     .eq(ClaimRecord::getItemId, record.getItemId())
                     .ne(ClaimRecord::getId, record.getId())
                     .and(wrapper -> wrapper.eq(ClaimRecord::getStatus, ClaimStatusEnum.PENDING.getCode())
@@ -344,7 +344,7 @@ public class ClaimRecordServiceImpl extends ServiceImpl<ClaimRecordMapper, Claim
 
                 // 判断：只有查到了码，并且 ttl 大于 0（还没过期）
                 if (pickupCode != null && ttl > 0) {
-                    // 🌟 核心转换：当前时间 + 剩余秒数 = 具体的过期时间点
+                    // 当前时间 + 剩余秒数，换算验证码过期时间点
                     vo.setCodeExpireTime(LocalDateTime.now().plusSeconds(ttl));
                     vo.setPickupCode(pickupCode);
                 } else {

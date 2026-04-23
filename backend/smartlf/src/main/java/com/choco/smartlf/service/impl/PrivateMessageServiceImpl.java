@@ -36,7 +36,7 @@ public class PrivateMessageServiceImpl extends ServiceImpl<PrivateMessageMapper,
     implements PrivateMessageService {
 
     private final UserService userService;
-    // 🌟 HTTP 接口调用的方法
+    // HTTP 接口调用
     @Override
     public PrivateMessage sendMessage(MessageSendDTO dto, Long senderId, boolean isReceiverOnline,boolean isReceiverFocusingMe) {
         if (senderId == null) {
@@ -53,7 +53,7 @@ public class PrivateMessageServiceImpl extends ServiceImpl<PrivateMessageMapper,
         BeanUtil.copyProperties(dto, privateMessage);
         privateMessage.setSenderId(senderId);
 
-        // 🌟 核心逻辑：在线直接标为已读 (1)，离线标为未读 (0)
+        // 在线直接标记已读，离线标记未读
         if (isReceiverOnline) {
             privateMessage.setIsRead(ReadStatusEnum.READ.getCode());
         } else {
@@ -82,7 +82,7 @@ public class PrivateMessageServiceImpl extends ServiceImpl<PrivateMessageMapper,
             throw new RuntimeException("不能给自己发私信");
         }
 
-        // 🌟 1. 查询聊天历史记录 (注意 SQL 的 OR 和 AND 的嵌套逻辑)
+        // 1. 查询聊天历史记录，注意 OR/AND 的组合条件
         // 我们要查的是：(发送人是我 AND 接收人是他) 或者 (发送人是他 AND 接收人是我)
         List<PrivateMessage> history = this.list(new LambdaQueryWrapper<PrivateMessage>()
                 // 第一组条件：我发给对方的
@@ -95,7 +95,7 @@ public class PrivateMessageServiceImpl extends ServiceImpl<PrivateMessageMapper,
                 .orderByAsc(PrivateMessage::getCreateTime)
         );
 
-        // 🌟 2. 状态联动：精准消除未读红点
+        // 2. 点开会话后，将该会话内未读消息批量标记为已读
         // 既然我点开了这个聊天框，那么对方发给我的、且我还没读的消息，统统设为已读！
         this.update(new LambdaUpdateWrapper<PrivateMessage>()
                 .set(PrivateMessage::getIsRead, ReadStatusEnum.READ.getCode())        // 改为已读
@@ -124,7 +124,7 @@ public class PrivateMessageServiceImpl extends ServiceImpl<PrivateMessageMapper,
             return new ArrayList<>();
         }
 
-        // 🌟 2. 核心修正：提取“对方的ID”并以此分组
+        // 2. 按会话对方 ID 分组
         // 逻辑：如果发件人是我，那对方就是收件人；如果发件人不是我，那对方就是发件人。
         Map<Long, List<PrivateMessage>> sessionMap = myMessages.stream()
                 .collect(Collectors.groupingBy(
@@ -138,7 +138,7 @@ public class PrivateMessageServiceImpl extends ServiceImpl<PrivateMessageMapper,
         Map<Long, User> userMap = userService.listByIds(targetUserIds).stream()
                 .collect(Collectors.toMap(User::getId, user -> user));
 
-        // 🌟 5. 终极拼装：将 消息 + 未读数 + 用户信息 组装成 VO
+        // 5. 组装会话 VO：消息、未读数、用户信息
         List<ChatSessionVO> resultList = sessionMap.entrySet().stream().map(entry -> {
                     Long targetId = entry.getKey();
                     List<PrivateMessage> chatHistory = entry.getValue(); // 这是我们俩所有的聊天记录（时间已倒序）
@@ -168,7 +168,7 @@ public class PrivateMessageServiceImpl extends ServiceImpl<PrivateMessageMapper,
 
                     return vo;
                 })
-                // 🌟 6. 终极排序：把有最新消息的会话顶到最上面
+                // 6. 按最新消息时间倒序排列
                 .sorted(Comparator.comparing(ChatSessionVO::getLastMessageTime).reversed())
                 .toList();
 

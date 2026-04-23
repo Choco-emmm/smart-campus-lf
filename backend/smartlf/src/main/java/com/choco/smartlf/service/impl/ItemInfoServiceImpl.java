@@ -125,7 +125,7 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
         }
         log.info("失物信息发布成功，帖子ID: {}", itemId);
 
-        // 🌟 触发 AI 多模态识别任务
+        // 触发 AI 多模态识别任务
         // 只要用户传了图片，或者写了初步的 publicDesc，我们都可以让 AI 去识别补全
         if (CollUtil.isNotEmpty(dto.getImagesUrlList())
                 ||StrUtil.isNotBlank(dto.getPublicDesc())) {
@@ -393,7 +393,7 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
         vo.setSolvedItems(solvedItems);
 
 
-        // 5. 统计指定时间内的活跃用户数 (按 userId 去重)
+        // 4. 统计指定时间内的活跃用户数 (按 userId 去重)
         // 因为 MyBatis-Plus 的 count() 默认是 SELECT COUNT(*)，无法直接去重
         // 所以我们这里用 groupBy 分组查询来达到去重的效果，获取分组后的集合大小
         long activeUsers = userActiveLogService.list(new LambdaQueryWrapper<UserActiveLog>()
@@ -417,7 +417,7 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
         Page<ItemInfo> page = new Page<>(pageNum, pageSize);
         LambdaQueryWrapper<ItemInfo> wrapper = new LambdaQueryWrapper<>();
 
-        // 🌟 核心条件：只查自己的
+        // 只查当前用户发布
         wrapper.eq(ItemInfo::getUserId, currentUserId);
 
         // 这里绝不加 status != 3 的条件，能查出违规贴。
@@ -516,7 +516,7 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
 
         log.info("【主线程】准备提交管理员 AI 周报任务...");
 
-        // 🌟 同样采用异步化处理，防止卡死定时任务调度器
+        // 异步生成，避免阻塞定时任务线程
        CompletableFuture.runAsync(() -> {
             try {
                 String content = polishClient.prompt()
@@ -560,7 +560,7 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
             }
         }
 
-        // 4. 🌟 最关键的一步：查核验表，把真实的问题，暗号和联系方式查出来给前端！
+        // 4. 查核验表并回填编辑所需字段
         ItemSecure itemSecure = itemSecureService.getOne(
                 new LambdaQueryWrapper<ItemSecure>().eq(ItemSecure::getItemId, id)
         );
@@ -605,10 +605,10 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
         Page<ItemInfo> page = new Page<>(pageNum, pageSize);
         LambdaQueryWrapper<ItemInfo> wrapper = new LambdaQueryWrapper<>();
 
-        // 🌟 核心条件：查目标用户的发布
+        // 核心条件：查目标用户发布
         wrapper.eq(ItemInfo::getUserId, userId);
 
-        // 🌟 核心拦截：如果当前登录的用户身份不是管理员，绝不能查出违规下架的帖子 (status != 3)
+        // 非管理员不能看到违规下架的帖子
         if(!RoleEnum.ADMIN.getCode().equals(UserContext.getUserRole())){
             wrapper.ne(ItemInfo::getStatus, ItemStatusEnum.BANNED.getCode());
         }
@@ -616,10 +616,10 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
         // 按创建时间倒序（最新的在最上面）
         wrapper.orderByDesc(ItemInfo::getCreateTime);
 
-        // 3. 执行查询
+        // 2. 执行查询
         this.page(page, wrapper);
 
-        // 4. 数据转换：ItemInfo -> ItemListVO (复用已有的转换逻辑，带上封面图)
+        // 3. 数据转换：ItemInfo -> ItemListVO (复用已有的转换逻辑，带上封面图)
         return page.convert(itemInfo -> {
             ItemListVO vo = new ItemListVO();
             BeanUtil.copyProperties(itemInfo, vo);
@@ -694,15 +694,15 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
         //异步调用
         CompletableFuture.runAsync(() -> {
             log.info("【异步线程】开始执行多模态任务");
-            // 🌟 1. 声明内部 DTO，用于在 try 和 finally 之间传递数据
+            // 1. 声明内部 DTO，在 try/finally 之间传递 AI 结果
             AIExtractResultDTO aiResult = null;
             try{
               aiResult= proxySelf.generateMultimodalInfo(itemInfo, imageUrls, userDesc, userId);
             }catch (AiCallLimitException e) {
-                // 🌟 精准捕获异常（不用打印红色的 Error，打 Info 就行，因为这是预期内的业务拦截）
+                // 预期内限流异常，记录 info 并跳过 AI 润色
                 log.info("【异步线程】用户 {} 触发 AI 限流，跳过润色环节。物品ID: {}", userId, itemInfo.getId());
 
-                // 🌟 核心魔法：顺着 WebSocket 把限流的消息推给前端！
+                // 通过 WebSocket 通知前端限流结果
                 String limitNotice = String.format(Constant.AI_CALL_LIMIT_NOTICE, itemInfo.getPublicDesc());
                 ChatWebSocketServer.pushSystemNotice(userId, limitNotice);
 
@@ -714,7 +714,7 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
                 throw e;
 
             } finally {
-                // 无论如何，帖子都必须进向量库（实现你完美的降级策略）
+                // 无论 AI 是否成功，帖子都写入向量库
                 this.ItemVectorized(itemInfo, userDesc, aiResult);
             }
         }, aiExecutor);
@@ -771,18 +771,18 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
         // 4. 解析结果
         String cleanJson = aiResponseStr.replace("```json", "").replace("```", "").trim();
         log.info("【多模态结果】{}", cleanJson);
-// 2. 🌟 核心破局：使用 Spring 原生 Jackson 直接反序列化为 Record！
+        // 使用 Jackson 反序列化为 Record
         AIExtractResultDTO aiResult = null;
         try {
             ObjectMapper objectMapper = new ObjectMapper();
-            // 这行代码对 Record 的支持是像素级完美的！
+            // Record 由 Jackson 直接映射
             aiResult = objectMapper.readValue(cleanJson, AIExtractResultDTO.class);
         } catch (Exception e) {
             log.error("【Jackson 解析失败】无法将 JSON 转为 Record！原文: {}", cleanJson, e);
             throw new RuntimeException("Jackson 解析失败！");
         }
 
-            // 5. 更新数据库 (修复了你之前漏掉右括号的 Bug，并使用了 record 的读取方式)
+            // 5. 更新数据库
             if (StrUtil.isNotBlank(aiResult.aiCategory())) {
                 ItemInfo infoUpdate = new ItemInfo();
                 infoUpdate.setId(itemId);
@@ -803,7 +803,7 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
             String noticeMsg = String.format(WsNoticeConstant.AI_POLISH_FINISH, safeTitle);
             ChatWebSocketServer.pushSystemNotice(userId, noticeMsg);
 
-        // 🌟 7. 返回 DTO 给外层的 finally 块使用
+        // 7. 返回 DTO 供外层 finally 使用
         return aiResult;
     }
 
@@ -820,7 +820,7 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
             safeTime = itemInfo.getEventTime().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
         }
 
-        // 🌟 优雅判空：如果被限流了，aiResult 就是 null，这里自动降级为“无”
+        // 判空：限流时 aiResult 为空，降级为默认文案
         String aiCategory = (aiResult != null && StrUtil.isNotBlank(aiResult.aiCategory()))
                 ? aiResult.aiCategory() : "暂无AI分类";
         String aiDesc = (aiResult != null && StrUtil.isNotBlank(aiResult.aiGeneratedDesc()))
@@ -833,14 +833,14 @@ public class ItemInfoServiceImpl extends ServiceImpl<ItemInfoMapper, ItemInfo>
         String finalContent = StrUtil.builder().append(AIConstant.NOMIC_DOC_PREFIX).append(vectorMsg).toString();
         log.info("【向量库】准备写入内容，模式: {}", aiResult != null ? "🚀 AI增强版" : "🛡️ 基础降级版");
 
-        // 2. 打包并入库
-        // 1. 强行把 MySQL 的 itemId 转成 String 作为向量主键
+        // 2. 构建文档并入库
+        // 将 MySQL 的 itemId 转成 String 作为向量主键
         String documentId = String.valueOf(itemId);
 
-// 2. 打包并入库（注意这里传入了三个参数：id, content, metadata）
+        // 组装 Document：id、content、metadata
         Document document = new Document(documentId, finalContent, Map.of("itemId", itemId));
 
-// 3. 执行覆盖式保存
+        // 3. 执行覆盖式保存
         simpleVectorStore.add(List.of(document));
         simpleVectorStore.save(new File(AIConstant.VECTOR_STORE_FILE_PATH));
 
