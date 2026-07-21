@@ -4,7 +4,7 @@ WORKDIR /build
 COPY pom.xml .
 # 配置 Maven 阿里云镜像加速下载依赖
 RUN mkdir -p /root/.m2 \
-    && echo '<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"><mirrors><mirror><id>aliyun</id><name>aliyun maven</name><url>https://maven.aliyun.com/repository/public</url><mirrorOf>central</mirrorOf></mirror></mirrors></settings>' > /root/.m2/settings.xml
+    && echo '<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"><mirrors><mirror><id>aliyun</id><name>aliyun maven</name><url>http://maven.aliyun.com/repository/public</url><mirrorOf>central</mirrorOf></mirror></mirrors></settings>' > /root/.m2/settings.xml
 RUN mvn dependency:go-offline -B
 COPY src ./src
 RUN mvn clean package -DskipTests
