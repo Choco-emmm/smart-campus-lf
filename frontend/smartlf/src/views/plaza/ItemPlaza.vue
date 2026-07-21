@@ -124,7 +124,7 @@ const getStatusType = (s) => s === 1 ? 'warning' : (s === 2 ? 'info' : 'primary'
 const getImageUrl = (url) => {
   if (!url) return 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
   if (url.startsWith('http')) return url
-  return `http://localhost:8080${url}` 
+  return `/api${url}` 
 }
 
 const fetchData = async () => {

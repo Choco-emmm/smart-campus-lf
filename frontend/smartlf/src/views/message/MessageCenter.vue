@@ -296,7 +296,7 @@ const sentClaims = ref([])
 
 const getImageUrl = (url) => {
   if (!url) return 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
-  return url.startsWith('http') ? url : `http://localhost:8080${url}`
+  return url.startsWith('http') ? url : `/api${url}`
 }
 
 const totalChatUnread = computed(() => sessionList.value.reduce((sum, s) => sum + s.unreadCount, 0))
@@ -449,7 +449,7 @@ const sendAiMsg = async () => {
 
   try {
     const token = localStorage.getItem('token') || ''
-    const response = await fetch(`http://localhost:8080/ai/chat/stream?sessionId=${aiSessionId.value}&message=${encodeURIComponent(userText)}`, {
+    const response = await fetch(`/api/ai/chat/stream?sessionId=${aiSessionId.value}&message=${encodeURIComponent(userText)}`, {
       method: 'GET',
       headers: { 'token': token, 'Accept': 'text/event-stream' }
     })

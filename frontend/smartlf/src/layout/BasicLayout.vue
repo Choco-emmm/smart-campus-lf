@@ -78,7 +78,7 @@ window.activeChatId = null
 
 const getImageUrl = (url) => {
   if (!url) return 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
-  return url.startsWith('http') ? url : `http://localhost:8080${url}`
+  return url.startsWith('http') ? url : `/api${url}`
 }
 
 const fetchUserInfo = async () => {
@@ -143,7 +143,7 @@ const initGlobalWebSocket = () => {
     return
   }
 
-  const wsUrl = `ws://localhost:8080/ws/chat/${token}`
+  const wsUrl = `///api/ws/chat/${token}`
   console.log('🚀 [WS排查 3] 准备连接的 WebSocket 地址:', wsUrl)
   
   const ws = new WebSocket(wsUrl)

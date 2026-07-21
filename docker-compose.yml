@@ -67,7 +67,7 @@ services:
       ADMIN_SECRET_KEY: ${ADMIN_SECRET_KEY}
       SYSTEM_FILE_PREFIX: /app/uploads/
       # 覆盖应用内 localhost:11434 为访问宿主机的 Ollama 实例
-      SPRING_AI_OLLAMA_BASE_URL: http://host.docker.internal:11434
+      SPRING_AI_OLLAMA_BASE_URL: ${OLLAMA_URL:-http://host.docker.internal:11434}
     deploy:
       resources:
         limits:

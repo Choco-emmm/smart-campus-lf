@@ -123,7 +123,7 @@ const locationDetail = ref('')
 const getImageUrl = (url) => {
   if (!url) return ''
   if (url.startsWith('http')) return url
-  return `http://localhost:8080${url}`
+  return `/api${url}`
 }
 const parseLocationEcho = (locStr) => {
   if (!locStr) return { path: [], detail: '' }
