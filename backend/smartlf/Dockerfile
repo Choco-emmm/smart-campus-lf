@@ -2,9 +2,6 @@
 FROM maven:3.9.6-eclipse-temurin-21 AS build
 WORKDIR /build
 COPY pom.xml .
-# 配置 Maven 腾讯云镜像加速下载依赖（避开阿里云最近不稳定的节点）
-RUN mkdir -p /root/.m2 \
-    && echo '<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"><mirrors><mirror><id>tencent</id><name>tencent maven</name><url>https://mirrors.cloud.tencent.com/nexus/repository/maven-public/</url><mirrorOf>central</mirrorOf></mirror></mirrors></settings>' > /root/.m2/settings.xml
 COPY src ./src
 RUN mvn clean package -DskipTests
 
