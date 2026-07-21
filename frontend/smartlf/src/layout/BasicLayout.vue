@@ -143,7 +143,7 @@ const initGlobalWebSocket = () => {
     return
   }
 
-  const wsUrl = `///api/ws/chat/${token}`
+  const wsUrl = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/api/ws/chat/${token}`
   console.log('🚀 [WS排查 3] 准备连接的 WebSocket 地址:', wsUrl)
   
   const ws = new WebSocket(wsUrl)
