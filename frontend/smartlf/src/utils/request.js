@@ -2,7 +2,7 @@ import axios from 'axios'
 import { ElMessage, ElMessageBox } from 'element-plus' // 🌟 引入弹窗组件
 
 const service = axios.create({
-    baseURL: 'http://localhost:8080',
+    baseURL: '/api',
     timeout: 5000
 })
 
